@@ -4,26 +4,37 @@
              x:Class="RotatingTable.Xamarin.Views.MainPage">
     <ContentPage.Content>
         <StackLayout>
-            <StackLayout Margin="8">
-                <Label Text="Установки" FontAttributes="Bold"/>
-                <StackLayout Orientation="Horizontal">
-                    <Label Text="Количество шагов"/>
-                    <Label Text="18" HorizontalOptions="EndAndExpand"/>
+            <StackLayout Margin="12">
+                <Label Text="Настройки" FontAttributes="Bold"/>
+                <StackLayout Margin="8">
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Количество шагов"/>
+                        <Label Text="18" HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"/>
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Ускорение"/>
+                        <Label Text="10" HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"/>
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Экспозиция"/>
+                        <Label Text="100" HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"/>
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Задержка"/>
+                        <Label Text="2500" HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"/>
                 </StackLayout>
-                <Slider BackgroundColor="LightGray"/>
-                <Label Text="Ускорение"/>
-                <Slider/>
-                <Label Text="Экспозиция"/>
-                <Slider/>
-                <Label Text="Задержка"/>
-                <Slider/>
             </StackLayout>
-            <StackLayout VerticalOptions="EndAndExpand" Margin="8">
-                <Label Text="Режимы" FontAttributes="Bold" Margin="8, 0, 0, 0"/>
-                <Button Text="Авто" CornerRadius="8" Margin="8, 0, 8, 0"/>
-                <Button Text="Ручной" CornerRadius="8" Margin="8, 0, 8, 0"/>
-                <Button Text="Безостановочный" CornerRadius="8" Margin="8, 0, 8, 0"/>
-                <Button Text="Видео" CornerRadius="8" Margin="8, 0, 8, 0"/>
+            <StackLayout VerticalOptions="EndAndExpand" Margin="12">
+                <Label Text="Режимы" FontAttributes="Bold"/>
+                <Button Text="Авто" CornerRadius="8"/>
+                <Button Text="Ручной" CornerRadius="8"/>
+                <Button Text="Безостановочный" CornerRadius="8"/>
+                <Button Text="Видео" CornerRadius="8"/>
             </StackLayout>
         </StackLayout>
     </ContentPage.Content>
