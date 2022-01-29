@@ -10,7 +10,7 @@ namespace RotatingTable.Xamarin.Services
     public class BluetoothService : IBluetoothService
     {
         private BluetoothSocket _socket;
-        private static UUID MY_UUID = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB");
+        private static readonly UUID MY_UUID = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB");
 
         /*
         public BluetoothAdapter Adapter
@@ -34,7 +34,7 @@ namespace RotatingTable.Xamarin.Services
         */
 
         public IDevice Device { get; set; }
-        public bool IsConnected => _socket == null ? false : _socket.IsConnected;
+        public bool IsConnected => _socket != null && _socket.IsConnected;
         /*
         public bool Connect(IDevice device)
         {

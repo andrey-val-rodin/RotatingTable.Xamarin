@@ -12,7 +12,9 @@ namespace RotatingTable.Xamarin.Services
 {
     public class StubDevice : IDevice
     {
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
         public string? Address { get; set; }
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
         public System.Guid Id { get; set; }
         public string Name { get; set; }
         public int Rssi { get; set; }

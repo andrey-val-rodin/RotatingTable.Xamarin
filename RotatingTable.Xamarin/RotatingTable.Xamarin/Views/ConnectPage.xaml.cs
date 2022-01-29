@@ -20,6 +20,7 @@ namespace RotatingTable.Xamarin.Views
             var address = await configService.GetMacAddressAsync();
             var connectModel = BindingContext as ConnectModel;
             connectModel.DeviceName = address;
+            await connectModel.ScanAsync();
         }
 
         private async void ListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)

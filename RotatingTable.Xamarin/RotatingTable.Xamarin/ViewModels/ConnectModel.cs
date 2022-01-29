@@ -14,8 +14,8 @@ namespace RotatingTable.Xamarin.ViewModels
     {
         private bool _isBusy = false;
         private string _deviceName;
-        private readonly ObservableCollection<string> _deviceNames = new ObservableCollection<string>();
-        private readonly List<IDevice> _devices = new List<IDevice>();
+        private readonly ObservableCollection<string> _deviceNames = new();
+        private readonly List<IDevice> _devices = new();
 
         private IAdapter _adapter;
         public IAdapter Adapter
@@ -56,12 +56,12 @@ namespace RotatingTable.Xamarin.ViewModels
         public ConnectModel()
         {
             RefreshCommand = new Command(async () =>
-                await Scan());
+                await ScanAsync());
         }
 
-        private async Task<bool> Scan()
+        public async Task<bool> ScanAsync()
         {
-            _isBusy = true;
+            IsBusy = true;
             try
             {
                 _devices.Clear();

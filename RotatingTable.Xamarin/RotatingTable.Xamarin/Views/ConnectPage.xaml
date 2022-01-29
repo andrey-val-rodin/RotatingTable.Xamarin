@@ -14,7 +14,7 @@
                 <Label Text="{Binding DeviceName}"/>
             </StackLayout>
             <RefreshView IsRefreshing="{Binding IsBusy}"
-                 Command="{Binding RefreshCommand}">
+                Command="{Binding RefreshCommand}">
                 <ListView ItemsSource="{Binding DeviceNames}" ItemSelected="ListView_ItemSelected">
                 </ListView>
             </RefreshView>
