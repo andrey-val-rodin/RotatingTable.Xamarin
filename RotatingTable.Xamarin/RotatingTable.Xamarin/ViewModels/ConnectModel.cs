@@ -4,6 +4,7 @@ using RotatingTable.Xamarin.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -68,17 +69,22 @@ namespace RotatingTable.Xamarin.ViewModels
 
                 Adapter.ScanTimeout = 10000;
                 //Adapter.ScanMode = ScanMode.LowPower;
-                Adapter.ScanTimeoutElapsed += (s, a) => IsBusy = false;
+                Adapter.ScanTimeoutElapsed += (s, a) => CancelScan();
                 Adapter.DeviceDiscovered += (s, a) =>
                 {
-                    _devices.Add(a.Device);
-                    DeviceNames.Add(GetDeviceName(a.Device));
+                    if (_devices.FirstOrDefault((d => 
+                        (d.NativeDevice as BluetoothDevice)?.Address == 
+                        (a.Device.NativeDevice as BluetoothDevice)?.Address)) == null)
+                    {
+                        _devices.Add(a.Device);
+                        DeviceNames.Add(GetDeviceName(a.Device));
+                    }
                 };
 
                 await Adapter.StartScanningForDevicesAsync();
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 IsBusy = false;
                 await Application.Current.MainPage.DisplayAlert("Что-то пошло не так...", e.Message, "OK");

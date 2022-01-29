@@ -129,6 +129,10 @@ namespace RotatingTable.Xamarin.Services
             {
                 Trace.Message("Adapter: Scan was cancelled.");
             }
+            finally
+            {
+                IsScanning = false;
+            }
         }
 
         public Task StopScanningForDevicesAsync()
