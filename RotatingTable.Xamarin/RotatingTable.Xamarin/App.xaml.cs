@@ -1,5 +1,4 @@
 ﻿using RotatingTable.Xamarin.Services;
-using RotatingTable.Xamarin.Views;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin
@@ -9,9 +8,8 @@ namespace RotatingTable.Xamarin
         public App()
         {
             InitializeComponent();
-
-            DependencyService.Register<MockDataStore>();
             MainPage = new AppShell();
+            DependencyService.RegisterSingleton<IBluetoothService>(new BluetoothService());
         }
 
         protected override void OnStart()

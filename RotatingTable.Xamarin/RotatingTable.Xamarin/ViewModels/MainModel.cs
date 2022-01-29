@@ -1,6 +1,6 @@
 ﻿namespace RotatingTable.Xamarin.ViewModels
 {
-    public class MainModel : BaseViewModel
+    public class MainModel : NotifyPropertyChangedImpl
     {
         public MainModel()
         {

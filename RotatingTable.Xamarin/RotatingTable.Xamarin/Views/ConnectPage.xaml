@@ -1,12 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:RotatingTable.Xamarin.ViewModels"
+             x:DataType="viewmodels:ConnectModel"
              x:Class="RotatingTable.Xamarin.Views.ConnectPage">
+    <ContentPage.BindingContext>
+        <viewmodels:ConnectModel/>
+    </ContentPage.BindingContext>
     <ContentPage.Content>
-        <StackLayout>
-            <Label Text="Connect!"
-                VerticalOptions="CenterAndExpand" 
-                HorizontalOptions="CenterAndExpand" />
+        <StackLayout Margin="12">
+            <StackLayout Orientation="Horizontal">
+                <Label Text="Стол:" FontAttributes="Bold"/>
+                <Label Text="{Binding DeviceName}"/>
+            </StackLayout>
+            <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding RefreshCommand}">
+                <ListView ItemsSource="{Binding DeviceNames}" ItemSelected="ListView_ItemSelected">
+                </ListView>
+            </RefreshView>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
