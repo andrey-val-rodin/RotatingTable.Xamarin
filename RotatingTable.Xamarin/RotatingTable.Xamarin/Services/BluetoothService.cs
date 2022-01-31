@@ -1,6 +1,7 @@
 ﻿using Android.Bluetooth;
 using Java.Util;
 using Plugin.BLE.Abstractions.Contracts;
+using RotatingTable.Xamarin.Models;
 using System;
 using System.Threading.Tasks;
 using Xamarin.Forms;
@@ -34,7 +35,13 @@ namespace RotatingTable.Xamarin.Services
         */
 
         public IDevice Device { get; set; }
+
         public bool IsConnected => _socket != null && _socket.IsConnected;
+
+        public int Steps { get; set; }
+        public int Acceleration { get; set; }
+        public int Exposure { get; set; }
+        public int Delay { get; set; }
         /*
         public bool Connect(IDevice device)
         {
@@ -60,7 +67,6 @@ namespace RotatingTable.Xamarin.Services
                 _socket = nativeDevice.CreateRfcommSocketToServiceRecord(MY_UUID);
                 // We connect the socket
                 _socket.Connect();
-                System.Console.WriteLine("Connection Successful");
             }
             catch
             {
@@ -73,19 +79,19 @@ namespace RotatingTable.Xamarin.Services
                 return false;
             }
 
-            Write("0");
-            var response = Read();
-            bool success = response == "Turn led off";
+            await WriteAsync(Commands.Status);
+            var response = await ReadAsync();
+            bool success = response == "READY";
             if (success)
             {
                 var service = DependencyService.Resolve<IConfigService>();
                 await service.SetMacAddressAsync(nativeDevice.Address);
             }
 
-            return success;
+            return success && await ReadConfigurationAsync();
         }
 
-        public void Write(string text)
+        public async Task WriteAsync(string text)
         {
             if (!IsConnected)
                 throw new InvalidOperationException("Bluetooth service is not connected");
@@ -97,10 +103,10 @@ namespace RotatingTable.Xamarin.Services
             // Convert it to bytes
             byte[] msgBuffer = message.GetBytes();
             // Write the array we just generated to the buffer
-            stream.Write(msgBuffer, 0, msgBuffer.Length);
+            await stream.WriteAsync(msgBuffer, 0, msgBuffer.Length);
         }
 
-        public string Read()
+        public async Task<string> ReadAsync()
         {
             if (!IsConnected)
                 throw new InvalidOperationException("Bluetooth service is not connected");
@@ -111,7 +117,7 @@ namespace RotatingTable.Xamarin.Services
             try
             {
                 // Read the input buffer and allocate the number of incoming bytes
-                var bytes = stream.Read(buffer, 0, buffer.Length);
+                var bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
                 // We verify that the bytes contain information
                 if (bytes > 0)
                 {
@@ -127,7 +133,7 @@ namespace RotatingTable.Xamarin.Services
             return result;
         }
 
-        public static string UnsafeAsciiBytesToString(byte[] buffer)
+        private string UnsafeAsciiBytesToString(byte[] buffer)
         {
             int end = 0;
             while (end < buffer.Length && buffer[end] != 0)
@@ -142,6 +148,36 @@ namespace RotatingTable.Xamarin.Services
                     return new string((sbyte*)pAscii, 0, end);
                 }
             }
+        }
+
+        private async Task<bool> ReadConfigurationAsync()
+        {
+            await WriteAsync(Commands.GetSteps);
+            var response = await ReadAsync();
+            if (!int.TryParse(response, out int steps))
+                return false;
+
+            await WriteAsync(Commands.GetAcceleration);
+            response = await ReadAsync();
+            if (!int.TryParse(response, out int acceleration))
+                return false;
+
+            await WriteAsync(Commands.GetExposure);
+            response = await ReadAsync();
+            if (!int.TryParse(response, out int exposure))
+                return false;
+
+            await WriteAsync(Commands.GetDelay);
+            response = await ReadAsync();
+            if (!int.TryParse(response, out int delay))
+                return false;
+
+            Steps = steps;
+            Acceleration = acceleration;
+            Exposure = exposure;
+            Delay = delay;
+
+            return true;
         }
     }
 }

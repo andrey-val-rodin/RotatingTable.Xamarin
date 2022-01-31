@@ -5,10 +5,15 @@ namespace RotatingTable.Xamarin.Services
 {
     public interface IBluetoothService
     {
+        bool IsConnected { get; }
         IDevice Device { get; set; }
+        int Acceleration { get; set; }
+        int Steps { get; set; }
+        int Exposure { get; set; }
+        int Delay { get; set; }
 
         Task<bool> ConnectAsync(string address);
-        string Read();
-        void Write(string text);
+        Task<string> ReadAsync();
+        Task WriteAsync(string text);
     }
 }

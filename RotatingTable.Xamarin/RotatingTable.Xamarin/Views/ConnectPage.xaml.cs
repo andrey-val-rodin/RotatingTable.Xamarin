@@ -29,7 +29,8 @@ namespace RotatingTable.Xamarin.Views
             connectModel.CancelScan();
 
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!await service.ConnectAsync((connectModel.Devices[e.SelectedItemIndex].NativeDevice as BluetoothDevice).Address))
+            var nativeDevice = connectModel.Devices[e.SelectedItemIndex].NativeDevice as BluetoothDevice;
+            if (!await service.ConnectAsync(nativeDevice.Address))
             {
                 await Application.Current.MainPage.DisplayAlert("Ошибка",
                     "Не удаётся установить связь с Bluetooth устройством", "OK");
