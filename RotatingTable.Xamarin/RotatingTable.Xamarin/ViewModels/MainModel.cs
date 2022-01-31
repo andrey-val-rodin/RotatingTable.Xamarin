@@ -1,6 +1,7 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -11,14 +12,30 @@ namespace RotatingTable.Xamarin.ViewModels
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
+        private int _currentMode;
         private int _steps;
         private int _acceleration;
         private int _exposure;
         private int _delay;
 
+        public string[] Modes => new[]
+            {
+                "Авто",
+                "Ручной",
+                "Безостановочный",
+                "Видео",
+                "Поворот 90°"
+            };
+
+        public int CurrentMode
+        {
+            get => _currentMode;
+            set => SetProperty(ref _currentMode, value);
+        }
+
         public int Steps
         {
-            get { return _steps; }
+            get => _steps;
             set
             {
                 if (SetProperty(ref _steps, value))
@@ -38,7 +55,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public int Acceleration
         {
-            get { return _acceleration; }
+            get => _acceleration;
             set
             {
                 if (SetProperty(ref _acceleration, value))
@@ -48,15 +65,12 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public string AccelerationText
         {
-            get
-            {
-                return Acceleration.ToString();
-            }
+            get => Acceleration.ToString();
         }
 
         public int Exposure
         {
-            get { return _exposure; }
+            get => _exposure;
             set
             {
                 if (SetProperty(ref _exposure, value))
@@ -66,15 +80,12 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public string ExposureText
         {
-            get
-            {
-                return (Exposure * 100).ToString();
-            }
+            get => (Exposure * 100).ToString();
         }
 
         public int Delay
         {
-            get { return _delay; }
+            get => _delay;
             set
             {
                 if (SetProperty(ref _delay, value))
@@ -84,12 +95,10 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public string DelayText
         {
-            get
-            {
-                return (Delay * 100).ToString();
-            }
+            get => (Delay * 100).ToString();
         }
 
+        public Command RunCommand { get; }
         public Command RunAutoCommand { get; }
         public Command ChangeStepsCommand { get; }
         public Command ChangeAccelerationCommand { get; }
@@ -98,17 +107,27 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public MainModel()
         {
-            RunAutoCommand = new Command(async () => await RunAutoAsync());
+            RunCommand = new Command(async () => await RunAsync());
             ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
             ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
             ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
             ChangeDelayCommand = new Command(async () => await ChangeDelayAsync());
         }
 
-        private async Task RunAutoAsync()
+        private async Task RunAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            await service.WriteAsync(Commands.RunAutoMode);
+            switch (CurrentMode)
+            {
+                case 0:
+                    await service.WriteAsync(Commands.RunAutoMode);
+                    break;
+
+                default:
+                    await Application.Current.MainPage.DisplayAlert("",
+                        "Не поддерживается пока", "OK");
+                    break;
+            }
         }
 
         private async Task ChangeStepsAsync()

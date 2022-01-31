@@ -10,6 +10,8 @@
     <ContentPage.Content>
         <StackLayout>
             <StackLayout Margin="12">
+                <Picker Title="Режим" ItemsSource="{Binding Modes}" SelectedIndex="{Binding CurrentMode}"/>
+                <Button Text="Старт" CornerRadius="8" Command="{Binding RunCommand}"/>
                 <Label Text="Настройки" FontAttributes="Bold"/>
                 <StackLayout Margin="8">
                     <StackLayout Orientation="Horizontal">
@@ -41,13 +43,6 @@
                             Maximum="50" Minimum="0" Value="{Binding Delay}"
                             DragCompletedCommand="{Binding ChangeDelayCommand}"/>
                 </StackLayout>
-            </StackLayout>
-            <StackLayout VerticalOptions="EndAndExpand" Margin="12">
-                <Label Text="Режимы" FontAttributes="Bold"/>
-                <Button Text="Авто" CornerRadius="8" Command="{Binding RunAutoCommand}"/>
-                <Button Text="Ручной" CornerRadius="8"/>
-                <Button Text="Безостановочный" CornerRadius="8"/>
-                <Button Text="Видео" CornerRadius="8"/>
             </StackLayout>
         </StackLayout>
     </ContentPage.Content>
