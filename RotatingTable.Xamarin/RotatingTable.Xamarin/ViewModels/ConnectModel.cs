@@ -10,11 +10,17 @@ using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.ViewModels
 {
+    public class DeviceInfo
+    {
+        public string Name { get; set; }
+        public string Address { get; set; }
+    }
+
     public class ConnectModel : NotifyPropertyChangedImpl
     {
         private bool _isBusy = false;
         private string _deviceName;
-        private readonly ObservableCollection<string> _deviceNames = new();
+        private readonly ObservableCollection<DeviceInfo> _deviceNames = new();
         private readonly List<IDevice> _devices = new();
 
         private IAdapter _adapter;
@@ -41,7 +47,7 @@ namespace RotatingTable.Xamarin.ViewModels
             set => SetProperty(ref _deviceName, value);
         }
 
-        public ObservableCollection<string> DeviceNames { get { return _deviceNames; } }
+        public ObservableCollection<DeviceInfo> DeviceNames { get { return _deviceNames; } }
 
         public IReadOnlyList<IDevice> Devices => _devices;
 
@@ -77,7 +83,11 @@ namespace RotatingTable.Xamarin.ViewModels
                         (a.Device.NativeDevice as BluetoothDevice)?.Address)) == null)
                     {
                         _devices.Add(a.Device);
-                        DeviceNames.Add(GetDeviceName(a.Device));
+                        DeviceNames.Add(new DeviceInfo
+                        {
+                            Name = GetDeviceName(a.Device),
+                            Address = GetDeviceAddress(a.Device)
+                        });
                     }
                 };
 
@@ -95,6 +105,11 @@ namespace RotatingTable.Xamarin.ViewModels
         private string GetDeviceName(IDevice device)
         {
             return string.IsNullOrEmpty(device.Name) ? "?" : device.Name;
+        }
+
+        private string GetDeviceAddress(IDevice device)
+        {
+            return (device.NativeDevice as BluetoothDevice).Address;
         }
 
         public void CancelScan()

@@ -35,6 +35,10 @@ namespace RotatingTable.Xamarin.Views
                 await Application.Current.MainPage.DisplayAlert("Ошибка",
                     "Не удаётся установить связь с Bluetooth устройством", "OK");
             }
+            else
+            {
+                await Shell.Current.GoToAsync("//MainPage");
+            }
         }
     }
 }

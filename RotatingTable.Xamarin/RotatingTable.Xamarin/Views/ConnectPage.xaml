@@ -2,7 +2,6 @@
 <ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:RotatingTable.Xamarin.ViewModels"
-             x:DataType="viewmodels:ConnectModel"
              x:Class="RotatingTable.Xamarin.Views.ConnectPage">
     <ContentPage.BindingContext>
         <viewmodels:ConnectModel/>
@@ -16,6 +15,11 @@
             <RefreshView IsRefreshing="{Binding IsBusy}"
                 Command="{Binding RefreshCommand}">
                 <ListView ItemsSource="{Binding DeviceNames}" ItemSelected="ListView_ItemSelected">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextCell Text="{Binding Name}" Detail="{Binding Address}"/>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
                 </ListView>
             </RefreshView>
         </StackLayout>
