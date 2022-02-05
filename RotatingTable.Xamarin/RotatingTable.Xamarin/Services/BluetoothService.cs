@@ -3,6 +3,8 @@ using Java.Util;
 using Plugin.BLE.Abstractions.Contracts;
 using RotatingTable.Xamarin.Models;
 using System;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -12,6 +14,7 @@ namespace RotatingTable.Xamarin.Services
     {
         private BluetoothSocket _socket;
         private static readonly UUID MY_UUID = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB");
+        private CancellationTokenSource _cancellationTokenSource;
 
         /*
         public BluetoothAdapter Adapter
@@ -56,6 +59,9 @@ namespace RotatingTable.Xamarin.Services
         */
         public async Task<bool> ConnectAsync(string address)
         {
+            if (IsConnected)
+                return true;
+
             // We start the connection with the arduino
             var nativeDevice = BluetoothAdapter.DefaultAdapter.GetRemoteDevice(address);
 
@@ -178,6 +184,68 @@ namespace RotatingTable.Xamarin.Services
             Delay = delay;
 
             return true;
+        }
+
+        //Event to initialize the thread that will listen to bluetooth requests
+        public void BeginListening(EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (eventHandler == null)
+                throw new ArgumentNullException(nameof(eventHandler));
+
+            _cancellationTokenSource = new();
+            var token = _cancellationTokenSource.Token;
+
+            // We create a thread that will be running in the background which will check if there is any data
+            //by the arduino
+            Task.Factory.StartNew(async () => await ReadStreamAsync(eventHandler, token));
+        }
+
+        private async Task ReadStreamAsync(EventHandler<DeviceInputEventArgs> eventHandler, CancellationToken token)
+        {
+            // We extract the input stream
+            Stream inStream;
+            try
+            {
+                inStream = _socket.InputStream;
+            }
+            catch (System.IO.IOException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
+
+            while (true)
+            {
+                if (token.IsCancellationRequested)
+                    return;
+
+                try
+                {
+                    byte[] buffer = new byte[80]; // will fill with zeroes
+                    // read the input buffer and allocate the number of incoming bytes
+                    int bytes = await inStream.ReadAsync(buffer, 0, buffer.Length);
+                    var text = UnsafeAsciiBytesToString(buffer);
+                    Console.WriteLine($"Received bytes: {bytes}\tText: '{text}'");
+                    // We verify that the bytes contain information
+                    if (bytes > 0)
+                    {
+                        //                            // We run in the main interface
+                        //                            RunOnUiThread(() =>
+                        //                            {
+                        eventHandler?.Invoke(this, new DeviceInputEventArgs { Text = text });
+                        //                            });
+                    }
+                }
+                catch (Java.IO.IOException)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public void EndListening()
+        {
+            _cancellationTokenSource.Cancel();
         }
     }
 }

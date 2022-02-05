@@ -16,7 +16,7 @@
                 Command="{Binding RefreshCommand}">
                 <ListView ItemsSource="{Binding DeviceNames}" ItemSelected="ListView_ItemSelected">
                     <ListView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="viewmodels:DeviceInfo">
                             <TextCell Text="{Binding Name}" Detail="{Binding Address}"/>
                         </DataTemplate>
                     </ListView.ItemTemplate>

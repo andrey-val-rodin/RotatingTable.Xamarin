@@ -4,12 +4,18 @@ using Android.Content;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace RotatingTable.Xamarin.Services
 {
+    public class DeviceInputEventArgs : EventArgs
+    {
+        public string Text { get; set; }
+    }
+
     public class StubDevice : IDevice
     {
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
@@ -73,12 +79,13 @@ namespace RotatingTable.Xamarin.Services
             _receiver = new InternalReceiver(this);
         }
 
-        public event System.EventHandler<DeviceEventArgs> DeviceAdvertised;
-        public event System.EventHandler<DeviceEventArgs> DeviceDiscovered;
-        public event System.EventHandler<DeviceEventArgs> DeviceConnected;
-        public event System.EventHandler<DeviceEventArgs> DeviceDisconnected;
-        public event System.EventHandler<DeviceErrorEventArgs> DeviceConnectionLost;
-        public event System.EventHandler ScanTimeoutElapsed;
+        public event EventHandler<DeviceEventArgs> DeviceAdvertised;
+        public event EventHandler<DeviceEventArgs> DeviceDiscovered;
+        public event EventHandler<DeviceEventArgs> DeviceConnected;
+        public event EventHandler<DeviceEventArgs> DeviceDisconnected;
+        public event EventHandler<DeviceErrorEventArgs> DeviceConnectionLost;
+        public event EventHandler ScanTimeoutElapsed;
+        public event EventHandler<DeviceInputEventArgs> DeviceSentData;
 
         public Task ConnectToDeviceAsync(IDevice device, ConnectParameters connectParameters = default, CancellationToken cancellationToken = default)
         {

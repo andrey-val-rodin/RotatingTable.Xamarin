@@ -1,4 +1,5 @@
 ﻿using Plugin.BLE.Abstractions.Contracts;
+using System;
 using System.Threading.Tasks;
 
 namespace RotatingTable.Xamarin.Services
@@ -15,5 +16,7 @@ namespace RotatingTable.Xamarin.Services
         Task<bool> ConnectAsync(string address);
         Task<string> ReadAsync();
         Task WriteAsync(string text);
+        void BeginListening(EventHandler<DeviceInputEventArgs> eventHandler);
+        void EndListening();
     }
 }

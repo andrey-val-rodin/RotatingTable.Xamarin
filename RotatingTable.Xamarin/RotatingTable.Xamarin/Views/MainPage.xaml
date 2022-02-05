@@ -10,39 +10,73 @@
     <ContentPage.Content>
         <StackLayout>
             <StackLayout Margin="12">
-                <Picker Title="Режим" ItemsSource="{Binding Modes}" SelectedIndex="{Binding CurrentMode}"/>
-                <Button Text="Старт" CornerRadius="8" Command="{Binding RunCommand}"/>
-                <Label Text="Настройки" FontAttributes="Bold"/>
-                <StackLayout Margin="8">
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Количество шагов"/>
-                        <Label Text="{Binding StepsText}" HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"
-                            Maximum="21" Minimum="0" Value="{Binding Steps}"
-                            DragCompletedCommand="{Binding ChangeStepsCommand}"/>
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Ускорение"/>
-                        <Label Text="{Binding AccelerationText}" HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"
-                            Maximum="10" Minimum="1" Value="{Binding Acceleration}"
-                            DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Экспозиция"/>
-                        <Label Text="{Binding ExposureText}" HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"
-                            Maximum="5" Minimum="1" Value="{Binding Exposure}"
-                            DragCompletedCommand="{Binding ChangeExposureCommand}"/>
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Задержка"/>
-                        <Label Text="{Binding DelayText}" HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray" MaximumTrackColor="Gray" ThumbColor="Blue"
-                            Maximum="50" Minimum="0" Value="{Binding Delay}"
-                            DragCompletedCommand="{Binding ChangeDelayCommand}"/>
+                <Label IsVisible="{Binding IsRunning}"
+                       Text="{Binding CurrentStep}"
+                       HorizontalOptions="Center"
+                       FontSize="24"/>
+                <Ellipse Stroke="Blue"
+                         IsVisible="{Binding IsRunning}"
+                         Fill="LightBlue"
+                         WidthRequest="400"
+                         HeightRequest="400"
+                         HorizontalOptions="Center"
+                         VerticalOptions="Start"/>
+                <Button Text="Стоп"
+                        IsVisible="{Binding IsRunning}"
+                        CornerRadius="8"
+                        BackgroundColor="Red"
+                        Command="{Binding StopCommand}"/>
+                <Picker Title="Режим"
+                        IsEnabled="{Binding IsReady}"
+                        ItemsSource="{Binding Modes}"
+                        SelectedIndex="{Binding CurrentMode}"/>
+                <Button Text="Старт"
+                        IsVisible="{Binding IsReady}"
+                        CornerRadius="8"
+                        Command="{Binding RunCommand}"/>
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Количество шагов"/>
+                    <Label Text="{Binding StepsText}"
+                           HorizontalOptions="EndAndExpand"/>
                 </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        IsEnabled="{Binding IsReady}"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="21" Minimum="0"
+                        Value="{Binding Steps}"
+                        DragCompletedCommand="{Binding ChangeStepsCommand}"/>
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Ускорение"/>
+                    <Label Text="{Binding AccelerationText}"
+                           HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="10" Minimum="1"
+                        Value="{Binding Acceleration}"
+                        DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Экспозиция"/>
+                    <Label Text="{Binding ExposureText}"
+                           HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="5" Minimum="1" Value="{Binding Exposure}"
+                        DragCompletedCommand="{Binding ChangeExposureCommand}"/>
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Задержка"/>
+                    <Label Text="{Binding DelayText}"
+                           HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="50" Minimum="0" Value="{Binding Delay}"
+                        DragCompletedCommand="{Binding ChangeDelayCommand}"/>
             </StackLayout>
         </StackLayout>
     </ContentPage.Content>

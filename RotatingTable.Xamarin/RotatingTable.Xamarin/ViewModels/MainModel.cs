@@ -1,7 +1,6 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -9,15 +8,27 @@ namespace RotatingTable.Xamarin.ViewModels
 {
     public class MainModel : NotifyPropertyChangedImpl
     {
+        public enum Mode
+        {
+            Auto = 0,
+            Manual = 1,
+            Nonstop = 2,
+            Video = 3,
+            Rotate = 4
+        };
+
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
         private int _currentMode;
+        private bool _isRunning;
+        private string _currentStep;
         private int _steps;
         private int _acceleration;
         private int _exposure;
         private int _delay;
 
+        // order as in Mode enum
         public string[] Modes => new[]
             {
                 "Авто",
@@ -31,6 +42,27 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             get => _currentMode;
             set => SetProperty(ref _currentMode, value);
+        }
+
+        public bool IsRunning
+        {
+            get => _isRunning;
+            set
+            {
+                if (SetProperty(ref _isRunning, value))
+                    OnPropertyChanged("IsReady");
+            }
+        }
+
+        public string CurrentStep
+        {
+            get => _currentStep;
+            set => SetProperty(ref _currentStep, value);
+        }
+
+        public bool IsReady
+        {
+            get => !IsRunning;
         }
 
         public int Steps
@@ -99,7 +131,7 @@ namespace RotatingTable.Xamarin.ViewModels
         }
 
         public Command RunCommand { get; }
-        public Command RunAutoCommand { get; }
+        public Command StopCommand { get; }
         public Command ChangeStepsCommand { get; }
         public Command ChangeAccelerationCommand { get; }
         public Command ChangeExposureCommand { get; }
@@ -108,6 +140,7 @@ namespace RotatingTable.Xamarin.ViewModels
         public MainModel()
         {
             RunCommand = new Command(async () => await RunAsync());
+            StopCommand = new Command(() => Stop());
             ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
             ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
             ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
@@ -117,17 +150,48 @@ namespace RotatingTable.Xamarin.ViewModels
         private async Task RunAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
+            string response;
             switch (CurrentMode)
             {
-                case 0:
+                case (int)Mode.Auto:
                     await service.WriteAsync(Commands.RunAutoMode);
+                    response = await service.ReadAsync();
+                    IsRunning = response == "OK";
+                    service.BeginListening((s, a) => OnDataReseived(a.Text));
                     break;
 
+                case (int)Mode.Manual:
+                case (int)Mode.Nonstop:
+                case (int)Mode.Video:
+                case (int)Mode.Rotate:
                 default:
                     await Application.Current.MainPage.DisplayAlert("",
                         "Не поддерживается пока", "OK");
                     break;
             }
+        }
+
+        public void OnDataReseived(string text)
+        {
+            Console.WriteLine($"Received text: '{text}'");
+            if (text.StartsWith("STEP "))
+            {
+                CurrentStep = text.Substring(5);
+            }
+            else if (text == "END")
+            {
+                // finished
+                var service = DependencyService.Resolve<IBluetoothService>();
+                service.EndListening();
+                CurrentStep = string.Empty;
+                IsRunning = false;
+            }
+        }
+
+        private void Stop()
+        {
+            //TODO
+            IsRunning = false;
         }
 
         private async Task ChangeStepsAsync()
