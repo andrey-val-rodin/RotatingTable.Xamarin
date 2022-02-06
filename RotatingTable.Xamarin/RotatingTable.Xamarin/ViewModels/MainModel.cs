@@ -17,13 +17,16 @@ namespace RotatingTable.Xamarin.ViewModels
             Rotate = 4
         };
 
+        public delegate void CurrentStepChangedEvent(object sender, EventArgs args);
+        public event CurrentStepChangedEvent CurrentStepChanged;
+
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
         private int _currentMode;
         private bool _isRunning;
-        private string _currentStep;
-        private int _steps;
+        private int _currentStep;
+        private int _stepsIndex;
         private int _acceleration;
         private int _exposure;
         private int _delay;
@@ -54,10 +57,14 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        public string CurrentStep
+        public int CurrentStep
         {
             get => _currentStep;
-            set => SetProperty(ref _currentStep, value);
+            set
+            {
+                if (SetProperty(ref _currentStep, value))
+                    CurrentStepChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public bool IsReady
@@ -65,23 +72,21 @@ namespace RotatingTable.Xamarin.ViewModels
             get => !IsRunning;
         }
 
-        public int Steps
+        public int StepsIndex
         {
-            get => _steps;
+            get => _stepsIndex;
             set
             {
-                if (SetProperty(ref _steps, value))
-                    OnPropertyChanged("StepsText");
+                if (SetProperty(ref _stepsIndex, value))
+                    OnPropertyChanged("Steps");
             }
         }
 
-        public string StepsText
+        public int Steps
         {
             get
             {
-                return CheckSteps()
-                    ? StepValues[Steps].ToString()
-                    : string.Empty;
+                return CheckSteps() ? StepValues[StepsIndex] : 0;
             }
         }
 
@@ -176,14 +181,13 @@ namespace RotatingTable.Xamarin.ViewModels
             Console.WriteLine($"Received text: '{text}'");
             if (text.StartsWith("STEP "))
             {
-                CurrentStep = text.Substring(5);
+                CurrentStep = int.TryParse(text.Substring(5), out int i) ? i : 0;
             }
             else if (text == "END")
             {
                 // finished
                 var service = DependencyService.Resolve<IBluetoothService>();
                 service.EndListening();
-                CurrentStep = string.Empty;
                 IsRunning = false;
             }
         }
@@ -200,11 +204,11 @@ namespace RotatingTable.Xamarin.ViewModels
             if (!CheckSteps())
             {
                 // Back to old value
-                Steps = Array.FindIndex(StepValues, e => e == service.Steps);
+                StepsIndex = Array.FindIndex(StepValues, e => e == service.Steps);
                 return;
             }
 
-            var newSteps = StepValues[Steps];
+            var newSteps = StepValues[StepsIndex];
             if (newSteps == service.Steps)
                 return;
 
@@ -219,7 +223,7 @@ namespace RotatingTable.Xamarin.ViewModels
             else
             {
                 // Back to old value
-                Steps = Array.FindIndex(StepValues, e => e == service.Steps);
+                StepsIndex = Array.FindIndex(StepValues, e => e == service.Steps);
             }
         }
 
@@ -311,7 +315,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private bool CheckSteps()
         {
-            return 0 <= Steps && Steps <= StepValues.Length;
+            return 0 <= StepsIndex && StepsIndex <= StepValues.Length;
         }
 
         private bool CheckAcceleration()

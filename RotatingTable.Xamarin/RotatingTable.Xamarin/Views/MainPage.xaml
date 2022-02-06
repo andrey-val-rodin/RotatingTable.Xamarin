@@ -2,6 +2,8 @@
 <ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:RotatingTable.Xamarin.ViewModels"
+             xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
+             xmlns:tt="clr-namespace:RotatingTable.Xamarin.Draw.TouchTracking"
              x:DataType="viewmodels:MainModel"
              x:Class="RotatingTable.Xamarin.Views.MainPage">
     <ContentPage.BindingContext>
@@ -10,22 +12,21 @@
     <ContentPage.Content>
         <StackLayout>
             <StackLayout Margin="12">
-                <Label IsVisible="{Binding IsRunning}"
-                       Text="{Binding CurrentStep}"
-                       HorizontalOptions="Center"
-                       FontSize="24"/>
-                <Ellipse Stroke="Blue"
-                         IsVisible="{Binding IsRunning}"
-                         Fill="LightBlue"
-                         WidthRequest="400"
-                         HeightRequest="400"
-                         HorizontalOptions="Center"
-                         VerticalOptions="Start"/>
-                <Button Text="Стоп"
-                        IsVisible="{Binding IsRunning}"
-                        CornerRadius="8"
-                        BackgroundColor="Red"
-                        Command="{Binding StopCommand}"/>
+                <!-- Enclose SKCanvasView in single-cell Grid. 
+                Otherwise, iOS won't get the touch events. -->
+                <Grid Grid.Row="1"
+                      HorizontalOptions="Center"
+                      IsVisible="{Binding IsRunning}"
+                      WidthRequest="500"
+                      HeightRequest="500">
+                    <skia:SKCanvasView x:Name="canvasView"
+                                       PaintSurface="OnCanvasViewPaintSurface"/>
+                    <Grid.Effects>
+                        <tt:TouchEffect Capture="True"/>
+                        <!-- TouchAction="OnTouchEffectAction" />-->
+                    </Grid.Effects>
+                </Grid>
+
                 <Picker Title="Режим"
                         IsEnabled="{Binding IsReady}"
                         ItemsSource="{Binding Modes}"
@@ -36,7 +37,7 @@
                         Command="{Binding RunCommand}"/>
                 <StackLayout Orientation="Horizontal">
                     <Label Text="Количество шагов"/>
-                    <Label Text="{Binding StepsText}"
+                    <Label Text="{Binding Steps}"
                            HorizontalOptions="EndAndExpand"/>
                 </StackLayout>
                 <Slider MinimumTrackColor="Gray"
@@ -44,7 +45,7 @@
                         MaximumTrackColor="Gray"
                         ThumbColor="Blue"
                         Maximum="21" Minimum="0"
-                        Value="{Binding Steps}"
+                        Value="{Binding StepsIndex}"
                         DragCompletedCommand="{Binding ChangeStepsCommand}"/>
                 <StackLayout Orientation="Horizontal">
                     <Label Text="Ускорение"/>
@@ -77,6 +78,11 @@
                         ThumbColor="Blue"
                         Maximum="50" Minimum="0" Value="{Binding Delay}"
                         DragCompletedCommand="{Binding ChangeDelayCommand}"/>
+                <Button Text="Стоп"
+                        IsVisible="{Binding IsRunning}"
+                        CornerRadius="8"
+                        BackgroundColor="Red"
+                        Command="{Binding StopCommand}"/>
             </StackLayout>
         </StackLayout>
     </ContentPage.Content>

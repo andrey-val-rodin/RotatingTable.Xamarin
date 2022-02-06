@@ -8,8 +8,8 @@ namespace RotatingTable.Xamarin.Services
     {
         bool IsConnected { get; }
         IDevice Device { get; set; }
-        int Acceleration { get; set; }
         int Steps { get; set; }
+        int Acceleration { get; set; }
         int Exposure { get; set; }
         int Delay { get; set; }
 
