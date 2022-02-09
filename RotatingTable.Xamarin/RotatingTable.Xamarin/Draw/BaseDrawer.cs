@@ -15,10 +15,13 @@ namespace RotatingTable.Xamarin.Draw
             StrokeJoin = SKStrokeJoin.Round,
             StrokeWidth = 1,
             TextSize = 100,
-            IsAntialias = false
+            IsAntialias = true
         };
 
         private MainModel Model { get; }
+        protected SKCanvas Canvas { get; private set; }
+        protected SKRect Rect { get; private set; }
+        protected int Radius { get; private set; }
 
         public BaseDrawer(MainModel model)
         {
@@ -27,63 +30,72 @@ namespace RotatingTable.Xamarin.Draw
 
         public virtual void Draw(SKPaintSurfaceEventArgs args)
         {
+            Canvas = args.Surface.Canvas;
+            Canvas.Clear();
+
+            DefineDrawArea(args);
+            DrawCircle();
+            DrawSelectedSector();
+            DrawBorder();
+            DrawText();
+        }
+
+        private void DefineDrawArea(SKPaintSurfaceEventArgs args)
+        {
             SKCanvas canvas = args.Surface.Canvas;
-            canvas.Clear();
 
-            var radius = args.Info.Rect.MidX;
-            SKRect rect = args.Info.Rect;
-            rect.Offset(-radius, -radius);
+            Radius = Math.Min(args.Info.Rect.Width, args.Info.Rect.Height) / 2;
+            var center = new SKPoint(args.Info.Rect.MidX, args.Info.Rect.MidY);
+            canvas.SetMatrix(SKMatrix.CreateTranslation(center.X, center.Y));
+            Rect = new(-Radius, -Radius, Radius, Radius);
+        }
 
-            canvas.SetMatrix(SKMatrix.CreateTranslation(radius, radius));
-
+        private void DrawCircle()
+        {
             _paint.Style = SKPaintStyle.Fill;
             var colors = new SKColor[] {
-                new SKColor(236, 236, 236),
-                new SKColor(200, 200, 200)
+                ((Color)Application.Current.Resources["SurfaceStart"]).ToSKColor(),
+                ((Color)Application.Current.Resources["SurfaceEnd"]).ToSKColor()
             };
-            var shader = SKShader.CreateLinearGradient(
-                new SKPoint(-args.Info.Rect.MidX, 0),
-                new SKPoint(args.Info.Rect.MidX, 0),
+            var shader = SKShader.CreateRadialGradient(
+                new SKPoint(0, 0),
+                Radius,
                 colors,
-                null,
                 SKShaderTileMode.Clamp);
             _paint.Shader = shader;
-            canvas.DrawOval(rect, _paint);
+            Canvas.DrawOval(Rect, _paint);
+        }
 
+        private void DrawBorder()
+        {
             _paint.Style = SKPaintStyle.Stroke;
-            _paint.Color = Color.Black.ToSKColor();
             _paint.Shader = null;
-            canvas.DrawOval(rect, _paint);
+            _paint.Color = ((Color)Application.Current.Resources["Border"]).ToSKColor();
+            Canvas.DrawOval(Rect, _paint);
+        }
 
+        private void DrawSelectedSector()
+        {
             var path = new SKPath();
             path.MoveTo(0, 0);
-            _paint.Color = Color.Red.ToSKColor();
             var angle = 360 * Model.CurrentStep / Model.Steps;
-            path.ArcTo(rect, 90, angle, false);
+            path.ArcTo(Rect, 90, angle, false);
             path.LineTo(0, 0);
 
             _paint.Style = SKPaintStyle.Fill;
-            _paint.Color = new SKColor(242, 242, 242);
-            canvas.DrawPath(path, _paint);
+            _paint.Shader = null;
+            _paint.Color = ((Color)Application.Current.Resources["Highlight"]).ToSKColor();
+            Canvas.DrawPath(path, _paint);
+        }
 
+        private void DrawText()
+        {
+            _paint.Style = SKPaintStyle.Fill;
+            _paint.Shader = null;
             _paint.Color = new SKColor(0, 0, 0);
             var text = Model.CurrentStep.ToString();
             var width = _paint.MeasureText(text);
-            canvas.DrawText(text, -width / 2, _paint.TextSize / 2, _paint);
-        }
-
-        private SKPoint Point(int angle, int radius)
-        {
-            return new SKPoint
-            {
-                X = (float)-Math.Sin(DegreeToRadian(angle)) * radius,
-                Y = (float)-Math.Cos(DegreeToRadian(angle)) * radius
-            };
-        }
-
-        private double DegreeToRadian(double angle)
-        {
-            return Math.PI * angle / 180.0;
+            Canvas.DrawText(text, -width / 2, _paint.TextSize / 2, _paint);
         }
     }
 }
