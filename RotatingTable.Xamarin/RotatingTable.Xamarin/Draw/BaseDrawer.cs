@@ -8,7 +8,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class BaseDrawer
     {
-        private readonly SKPaint _paint = new()
+        protected readonly SKPaint _paint = new()
         {
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
@@ -18,7 +18,7 @@ namespace RotatingTable.Xamarin.Draw
             IsAntialias = true
         };
 
-        private MainModel Model { get; }
+        protected MainModel Model { get; }
         protected SKCanvas Canvas { get; private set; }
         protected SKRect Rect { get; private set; }
         protected int Radius { get; private set; }
@@ -30,27 +30,21 @@ namespace RotatingTable.Xamarin.Draw
 
         public virtual void Draw(SKPaintSurfaceEventArgs args)
         {
-            Canvas = args.Surface.Canvas;
-            Canvas.Clear();
-
             DefineDrawArea(args);
-            DrawCircle();
-            DrawSelectedSector();
-            DrawBorder();
-            DrawText();
+            Canvas.Clear();
         }
 
         private void DefineDrawArea(SKPaintSurfaceEventArgs args)
         {
-            SKCanvas canvas = args.Surface.Canvas;
+            Canvas = args.Surface.Canvas;
 
             Radius = Math.Min(args.Info.Rect.Width, args.Info.Rect.Height) / 2;
             var center = new SKPoint(args.Info.Rect.MidX, args.Info.Rect.MidY);
-            canvas.SetMatrix(SKMatrix.CreateTranslation(center.X, center.Y));
+            Canvas.SetMatrix(SKMatrix.CreateTranslation(center.X, center.Y));
             Rect = new(-Radius, -Radius, Radius, Radius);
         }
 
-        private void DrawCircle()
+        protected void DrawCircle()
         {
             _paint.Style = SKPaintStyle.Fill;
             var colors = new SKColor[] {
@@ -66,7 +60,7 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawOval(Rect, _paint);
         }
 
-        private void DrawBorder()
+        protected void DrawBorder()
         {
             _paint.Style = SKPaintStyle.Stroke;
             _paint.Shader = null;
@@ -74,7 +68,7 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawOval(Rect, _paint);
         }
 
-        private void DrawSelectedSector()
+        protected void DrawSelectedSector()
         {
             var path = new SKPath();
             path.MoveTo(0, 0);
@@ -88,7 +82,7 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawPath(path, _paint);
         }
 
-        private void DrawText()
+        protected void DrawText()
         {
             _paint.Style = SKPaintStyle.Fill;
             _paint.Shader = null;

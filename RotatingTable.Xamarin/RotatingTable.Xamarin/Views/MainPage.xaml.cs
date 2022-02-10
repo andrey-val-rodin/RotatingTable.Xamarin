@@ -1,5 +1,6 @@
 ﻿using RotatingTable.Xamarin.Draw;
 using RotatingTable.Xamarin.Services;
+using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp.Views.Forms;
 using System;
@@ -11,6 +12,8 @@ namespace RotatingTable.Xamarin.Views
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class MainPage : ContentPage
     {
+        private readonly Factory _drawFactory;
+
         public MainModel Model
         {
             get
@@ -22,6 +25,7 @@ namespace RotatingTable.Xamarin.Views
         public MainPage()
         {
             InitializeComponent();
+            _drawFactory = new(Model);
             Model.CurrentStepChanged += Model_CurrentStepChanged;
         }
 
@@ -47,7 +51,7 @@ namespace RotatingTable.Xamarin.Views
 
         private void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)
         {
-            new BaseDrawer(Model).Draw(args);
+            _drawFactory.GetDrawer((Mode)Model.CurrentMode).Draw(args);
         }
 
         private void Model_CurrentStepChanged(object sender, EventArgs args)

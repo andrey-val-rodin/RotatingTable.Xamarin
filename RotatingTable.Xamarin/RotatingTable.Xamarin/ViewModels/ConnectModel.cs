@@ -72,6 +72,7 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 _devices.Clear();
                 DeviceNames.Clear();
+                AddKnownDevices();
 
                 Adapter.ScanTimeout = 10000;
                 //Adapter.ScanMode = ScanMode.LowPower;
@@ -99,6 +100,27 @@ namespace RotatingTable.Xamarin.ViewModels
                 IsBusy = false;
                 await Application.Current.MainPage.DisplayAlert("Что-то пошло не так...", e.Message, "OK");
                 return false;
+            }
+        }
+
+        private void AddKnownDevices()
+        {
+            var knownDevices = TemporaryAdapter.KnownDevises;
+            foreach (var d in knownDevices)
+            {
+                var device = new StubDevice
+                {
+                    Name = d.Name,
+                    Address = d.Address,
+                    NativeDevice = d
+                };
+
+                _devices.Add(device);
+                DeviceNames.Add(new DeviceInfo
+                {
+                    Name = GetDeviceName(device),
+                    Address = GetDeviceAddress(device)
+                });
             }
         }
 

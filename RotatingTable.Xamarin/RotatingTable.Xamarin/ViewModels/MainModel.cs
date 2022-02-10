@@ -8,15 +8,6 @@ namespace RotatingTable.Xamarin.ViewModels
 {
     public class MainModel : NotifyPropertyChangedImpl
     {
-        public enum Mode
-        {
-            Auto = 0,
-            Manual = 1,
-            Nonstop = 2,
-            Video = 3,
-            Rotate = 4
-        };
-
         public delegate void CurrentStepChangedEvent(object sender, EventArgs args);
         public event CurrentStepChangedEvent CurrentStepChanged;
 
@@ -168,7 +159,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 case (int)Mode.Manual:
                 case (int)Mode.Nonstop:
                 case (int)Mode.Video:
-                case (int)Mode.Rotate:
+                case (int)Mode.Rotate90:
                 default:
                     await Application.Current.MainPage.DisplayAlert("",
                         "Не поддерживается пока", "OK");

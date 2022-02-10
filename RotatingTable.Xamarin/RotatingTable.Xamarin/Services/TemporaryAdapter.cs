@@ -68,6 +68,14 @@ namespace RotatingTable.Xamarin.Services
         private readonly InternalReceiver _receiver;
         private CancellationTokenSource _scanCancellationTokenSource;
 
+        static public ICollection<BluetoothDevice> KnownDevises
+        {
+            get
+            {
+                var adapter = BluetoothAdapter.DefaultAdapter;
+                return adapter.BondedDevices;
+            }
+        }
         public bool IsScanning { get; set; }
         public int ScanTimeout { get; set; }
         public Plugin.BLE.Abstractions.Contracts.ScanMode ScanMode { get; set; }
