@@ -8,8 +8,8 @@ namespace RotatingTable.Xamarin.ViewModels
 {
     public class MainModel : NotifyPropertyChangedImpl
     {
-        public delegate void CurrentStepChangedEvent(object sender, EventArgs args);
-        public event CurrentStepChangedEvent CurrentStepChanged;
+        public event CurrentStepChangedEventHandler CurrentStepChanged;
+        public event CurrentPosChangedEventHandler CurrentPosChanged;
 
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
@@ -17,6 +17,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private int _currentMode;
         private bool _isRunning;
         private int _currentStep;
+        private int _currentPos;
         private int _stepsIndex;
         private int _acceleration;
         private int _exposure;
@@ -29,7 +30,8 @@ namespace RotatingTable.Xamarin.ViewModels
                 "Ручной",
                 "Безостановочный",
                 "Видео",
-                "Поворот 90°"
+                "Поворот 90°",
+                "Свободное перемещение"
             };
 
         public int CurrentMode
@@ -53,8 +55,20 @@ namespace RotatingTable.Xamarin.ViewModels
             get => _currentStep;
             set
             {
+                var oldValue = _currentStep;
                 if (SetProperty(ref _currentStep, value))
-                    CurrentStepChanged?.Invoke(this, EventArgs.Empty);
+                    CurrentStepChanged?.Invoke(this, new CurrentStepChangedEventArgs(oldValue, _currentStep));
+            }
+        }
+
+        public int CurrentPos
+        {
+            get => _currentPos;
+            set
+            {
+                var oldValue = _currentPos;
+                if (SetProperty(ref _currentPos, value))
+                    CurrentPosChanged?.Invoke(this, new CurrentPosChangedEventArgs(oldValue, _currentPos));
             }
         }
 
@@ -156,6 +170,13 @@ namespace RotatingTable.Xamarin.ViewModels
                     service.BeginListening((s, a) => OnDataReseived(a.Text));
                     break;
 
+                case (int)Mode.FreeMovement:
+                    await service.WriteAsync(Commands.RunFreeMovement);
+                    response = await service.ReadAsync();
+                    IsRunning = response == "OK";
+                    service.BeginListening((s, a) => OnDataReseived(a.Text));
+                    break;
+
                 case (int)Mode.Manual:
                 case (int)Mode.Nonstop:
                 case (int)Mode.Video:
@@ -173,6 +194,10 @@ namespace RotatingTable.Xamarin.ViewModels
             if (text.StartsWith("STEP "))
             {
                 CurrentStep = int.TryParse(text.Substring(5), out int i) ? i : 0;
+            }
+            else if (text.StartsWith("POS "))
+            {
+                // TODO
             }
             else if (text == "END")
             {

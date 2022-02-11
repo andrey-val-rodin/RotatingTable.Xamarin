@@ -1,4 +1,4 @@
-﻿namespace RotatingTable.Xamarin.Draw.TouchTracking
+﻿namespace RotatingTable.Xamarin.TouchTracking
 {
     public enum TouchActionType
     {

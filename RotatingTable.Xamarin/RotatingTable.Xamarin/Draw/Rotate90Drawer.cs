@@ -5,7 +5,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class Rotate90Drawer : BaseDrawer
     {
-        public Rotate90Drawer(MainModel model) : base(model)
+        public Rotate90Drawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
         {
         }
 
@@ -14,7 +14,7 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawSelectedSector();
+            //DrawSelectedSector(); TODO
             DrawBorder();
             DrawText();
         }

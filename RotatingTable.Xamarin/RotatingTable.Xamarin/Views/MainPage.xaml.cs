@@ -6,13 +6,14 @@ using SkiaSharp.Views.Forms;
 using System;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
+using RotatingTable.Xamarin.TouchTracking;
 
 namespace RotatingTable.Xamarin.Views
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class MainPage : ContentPage
     {
-        private readonly Factory _drawFactory;
+        private readonly Selector _selector;
 
         public MainModel Model
         {
@@ -25,8 +26,9 @@ namespace RotatingTable.Xamarin.Views
         public MainPage()
         {
             InitializeComponent();
-            _drawFactory = new(Model);
-            Model.CurrentStepChanged += Model_CurrentStepChanged;
+            _selector = new(canvasView, Model);
+            Model.CurrentStepChanged += OnCurrentStepChanged;
+            Model.CurrentPosChanged += OnCurrentPosChanged;
         }
 
         protected override async void OnAppearing()
@@ -51,12 +53,22 @@ namespace RotatingTable.Xamarin.Views
 
         private void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)
         {
-            _drawFactory.GetDrawer((Mode)Model.CurrentMode).Draw(args);
+            _selector.GetDrawer((Mode)Model.CurrentMode).Draw(args);
         }
 
-        private void Model_CurrentStepChanged(object sender, EventArgs args)
+        private void OnCurrentStepChanged(object sender, CurrentStepChangedEventArgs args)
         {
             canvasView.InvalidateSurface();
+        }
+
+        private void OnCurrentPosChanged(object sender, CurrentPosChangedEventArgs args)
+        {
+            canvasView.InvalidateSurface();
+        }
+
+        void OnTouchEffectAction(object sender, TouchActionEventArgs args)
+        {
+            _selector.GetDrawer((Mode)Model.CurrentMode).OnTouchEffectAction(sender, args);
         }
     }
 }

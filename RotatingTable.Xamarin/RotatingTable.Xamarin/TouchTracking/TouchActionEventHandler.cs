@@ -1,4 +1,4 @@
-﻿namespace RotatingTable.Xamarin.Draw.TouchTracking
+﻿namespace RotatingTable.Xamarin.TouchTracking
 {
     public delegate void TouchActionEventHandler(object sender, TouchActionEventArgs args);
 }

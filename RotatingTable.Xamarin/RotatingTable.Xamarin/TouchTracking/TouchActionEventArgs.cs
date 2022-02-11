@@ -1,7 +1,8 @@
-﻿using System;
+﻿using RotatingTable.Xamarin.TouchTracking;
+using System;
 using Xamarin.Forms;
 
-namespace RotatingTable.Xamarin.Draw.TouchTracking
+namespace RotatingTable.Xamarin.TouchTracking
 {
     public class TouchActionEventArgs : EventArgs
     {

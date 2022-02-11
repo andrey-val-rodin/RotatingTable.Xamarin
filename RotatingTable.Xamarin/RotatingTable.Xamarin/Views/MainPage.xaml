@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:RotatingTable.Xamarin.ViewModels"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
-             xmlns:tt="clr-namespace:RotatingTable.Xamarin.Draw.TouchTracking"
+             xmlns:tt="clr-namespace:RotatingTable.Xamarin.TouchTracking"
              x:DataType="viewmodels:MainModel"
              x:Class="RotatingTable.Xamarin.Views.MainPage">
     <ContentPage.BindingContext>
@@ -22,8 +22,8 @@
                     <skia:SKCanvasView x:Name="canvasView"
                                        PaintSurface="OnCanvasViewPaintSurface"/>
                     <Grid.Effects>
-                        <tt:TouchEffect Capture="True"/>
-                        <!-- TouchAction="OnTouchEffectAction" />-->
+                        <tt:TouchEffect Capture="True"
+                                        TouchAction="OnTouchEffectAction" />
                     </Grid.Effects>
                 </Grid>
 

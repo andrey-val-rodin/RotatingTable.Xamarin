@@ -36,6 +36,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Draw\TouchTracking\" />
+    <Folder Include="TouchTracking\" />
   </ItemGroup>
 </Project>

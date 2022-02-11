@@ -1,4 +1,5 @@
-﻿using RotatingTable.Xamarin.ViewModels;
+﻿using RotatingTable.Xamarin.TouchTracking;
+using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Forms;
 using System;
@@ -18,13 +19,16 @@ namespace RotatingTable.Xamarin.Draw
             IsAntialias = true
         };
 
+        protected SKCanvasView CanvasView { get; }
         protected MainModel Model { get; }
         protected SKCanvas Canvas { get; private set; }
-        protected SKRect Rect { get; private set; }
         protected int Radius { get; private set; }
+        protected SKPoint Center { get; private set; }
+        protected SKRect Rect { get; private set; }
 
-        public BaseDrawer(MainModel model)
+        public BaseDrawer(SKCanvasView canvasView, MainModel model)
         {
+            CanvasView = canvasView;
             Model = model;
         }
 
@@ -39,8 +43,8 @@ namespace RotatingTable.Xamarin.Draw
             Canvas = args.Surface.Canvas;
 
             Radius = Math.Min(args.Info.Rect.Width, args.Info.Rect.Height) / 2;
-            var center = new SKPoint(args.Info.Rect.MidX, args.Info.Rect.MidY);
-            Canvas.SetMatrix(SKMatrix.CreateTranslation(center.X, center.Y));
+            Center = new SKPoint(args.Info.Rect.MidX, args.Info.Rect.MidY);
+            Canvas.SetMatrix(SKMatrix.CreateTranslation(Center.X, Center.Y));
             Rect = new(-Radius, -Radius, Radius, Radius);
         }
 
@@ -68,20 +72,6 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawOval(Rect, _paint);
         }
 
-        protected void DrawSelectedSector()
-        {
-            var path = new SKPath();
-            path.MoveTo(0, 0);
-            var angle = 360 * Model.CurrentStep / Model.Steps;
-            path.ArcTo(Rect, 90, angle, false);
-            path.LineTo(0, 0);
-
-            _paint.Style = SKPaintStyle.Fill;
-            _paint.Shader = null;
-            _paint.Color = ((Color)Application.Current.Resources["Highlight"]).ToSKColor();
-            Canvas.DrawPath(path, _paint);
-        }
-
         protected void DrawText()
         {
             _paint.Style = SKPaintStyle.Fill;
@@ -90,6 +80,10 @@ namespace RotatingTable.Xamarin.Draw
             var text = Model.CurrentStep.ToString();
             var width = _paint.MeasureText(text);
             Canvas.DrawText(text, -width / 2, _paint.TextSize / 2, _paint);
+        }
+
+        public virtual void OnTouchEffectAction(object sender, TouchActionEventArgs args)
+        {
         }
     }
 }

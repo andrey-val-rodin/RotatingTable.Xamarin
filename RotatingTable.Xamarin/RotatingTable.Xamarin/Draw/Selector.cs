@@ -1,17 +1,20 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.ViewModels;
+using SkiaSharp.Views.Forms;
 
 namespace RotatingTable.Xamarin.Draw
 {
-    public class Factory
+    public class Selector
     {
         private readonly AutoDrawer _autoDrawer;
         private readonly Rotate90Drawer _rotate90Drawer;
+        private readonly FreeMovementDrawer _freeMovementDrawer;
 
-        public Factory(MainModel model)
+        public Selector(SKCanvasView canvasView, MainModel model)
         {
-            _autoDrawer = new(model);
-            _rotate90Drawer = new(model);
+            _autoDrawer = new(canvasView, model);
+            _rotate90Drawer = new(canvasView, model);
+            _freeMovementDrawer = new(canvasView, model);
         }
 
         public BaseDrawer GetDrawer(Mode mode)
@@ -22,6 +25,9 @@ namespace RotatingTable.Xamarin.Draw
                     return _autoDrawer;
                 case Mode.Rotate90:
                     return _rotate90Drawer;
+                case Mode.FreeMovement:
+                    return _freeMovementDrawer;
+
                 case Mode.Manual:
                 case Mode.Nonstop:
                 case Mode.Video:
