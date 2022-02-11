@@ -1,8 +1,10 @@
-﻿using RotatingTable.Xamarin.TouchTracking;
+﻿using RotatingTable.Xamarin.Services;
+using RotatingTable.Xamarin.TouchTracking;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Forms;
 using System;
+using System.Threading.Tasks;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.Draw
@@ -46,7 +48,7 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawPath(path, _paint);
         }
 
-        public override void OnTouchEffectAction(object sender, TouchActionEventArgs args)
+        public override async void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
             var pt = Transform(args.Location);
             switch (args.Type)
@@ -54,7 +56,7 @@ namespace RotatingTable.Xamarin.Draw
                 case TouchActionType.Pressed:
                     if (!IsPtInsideCircle(pt))
                     {
-                        Cancel();
+                        Clear();
                         break;
                     }
 
@@ -68,7 +70,7 @@ namespace RotatingTable.Xamarin.Draw
                         break;
 
                     if (!IsPtInsideCircle(pt))
-                        Cancel();
+                        Clear();
                     else
                     {
                         _endAngle = (int)PtToAngle(pt);
@@ -84,13 +86,28 @@ namespace RotatingTable.Xamarin.Draw
                     break;
 
                 case TouchActionType.Released:
-                    Cancel();
+                    await StartMovementAsync();
                     break;
 
                 default:
-                    Cancel();
+                    CanvasView.InvalidateSurface();
+                    Clear();
                     break;
             }
+        }
+
+        private async Task<bool> StartMovementAsync()
+        {
+            var angle = _endAngle - _startAngle;
+            if (angle == 0)
+                return false;
+
+            var service = DependencyService.Resolve<IBluetoothService>();
+            await service.WriteAsync($"FM {angle}");
+            var response = await service.ReadAsync();
+            Model.IsRunning = response == "OK";
+            //service.BeginListening((s, a) => Model.OnDataReseived(a.Text));
+            return true;
         }
 
         private SKPoint Transform(Point pt)
@@ -107,7 +124,7 @@ namespace RotatingTable.Xamarin.Draw
             return hypotenuse < Radius;
         }
 
-        private void Cancel()
+        private void Clear()
         {
             _isDragging = false;
             _startAngle = _endAngle = 0;
