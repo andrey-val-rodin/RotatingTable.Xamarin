@@ -19,23 +19,29 @@ namespace RotatingTable.Xamarin.Draw
         {
         }
 
+        private int Angle
+        {
+            get => _endAngle - _startAngle;
+        }
+
         public override void Draw(SKPaintSurfaceEventArgs args)
         {
             base.Draw(args);
 
             DrawCircle();
             DrawSector();
+            DrawArrow();
             DrawBorder();
         }
 
-        protected void DrawSector()
+        private void DrawSector()
         {
             if (!_isDragging)
                 return;
 
             var path = new SKPath();
             path.MoveTo(0, 0);
-            var angle = _endAngle - _startAngle;
+            var angle = Angle;
             if (angle == 0)
                 angle = 1;
 
@@ -46,6 +52,45 @@ namespace RotatingTable.Xamarin.Draw
             _paint.Shader = null;
             _paint.Color = ((Color)Application.Current.Resources["Highlight"]).ToSKColor();
             Canvas.DrawPath(path, _paint);
+        }
+
+        private void DrawArrow()
+        {
+            const int indent = 24;
+
+            if (!_isDragging || Math.Abs(Angle) < 8)
+                return;
+
+            var path = new SKPath();
+            var rect = Rect;
+            rect.Inflate(-indent, -indent);
+            path.ArcTo(rect, _startAngle, Angle, true);
+
+            // Draw arc
+            _paint.Style = SKPaintStyle.Stroke;
+            _paint.Shader = null;
+            _paint.Color = ((Color)Application.Current.Resources["Arrow"]).ToSKColor();
+            Canvas.DrawPath(path, _paint);
+
+            // Draw arrow
+            _paint.Style = SKPaintStyle.Fill;
+            path = new SKPath();
+            if (Angle > 0)
+            {
+                path.MoveTo(GetCirclePt(_endAngle, Radius - indent));
+                path.LineTo(GetCirclePt(_endAngle - 6, Radius - indent + 4));
+                path.LineTo(GetCirclePt(_endAngle - 6, Radius - indent - 4));
+                path.Close();
+                Canvas.DrawPath(path, _paint);
+            }
+            else
+            {
+                path.MoveTo(GetCirclePt(_endAngle, Radius - indent));
+                path.LineTo(GetCirclePt(_endAngle + 6, Radius - indent + 4));
+                path.LineTo(GetCirclePt(_endAngle + 6, Radius - indent - 4));
+                path.Close();
+                Canvas.DrawPath(path, _paint);
+            }
         }
 
         public override async void OnTouchEffectAction(object sender, TouchActionEventArgs args)
@@ -98,12 +143,11 @@ namespace RotatingTable.Xamarin.Draw
 
         private async Task<bool> StartMovementAsync()
         {
-            var angle = _endAngle - _startAngle;
-            if (angle == 0)
+            if (Angle == 0)
                 return false;
 
             var service = DependencyService.Resolve<IBluetoothService>();
-            await service.WriteAsync($"FM {angle}");
+            await service.WriteAsync($"FM {Angle}");
             var response = await service.ReadAsync();
             Model.IsRunning = response == "OK";
             //service.BeginListening((s, a) => Model.OnDataReseived(a.Text));
@@ -147,7 +191,5 @@ namespace RotatingTable.Xamarin.Draw
 
             return ToDegrees(radians);
         }
-
-        private double ToDegrees(double angle) => angle * 180 / Math.PI;
     }
 }

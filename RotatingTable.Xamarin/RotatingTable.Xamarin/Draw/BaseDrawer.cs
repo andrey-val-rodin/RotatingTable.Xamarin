@@ -82,8 +82,20 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawText(text, -width / 2, _paint.TextSize / 2, _paint);
         }
 
+        protected SKPoint GetCirclePt(int angleDegrees, int raduis)
+        {
+            return new SKPoint
+            {
+                X = (float)Math.Cos(ToRadians(angleDegrees)) * raduis,
+                Y = (float)Math.Sin(ToRadians(angleDegrees)) * raduis
+            };
+        }
+
         public virtual void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
         }
+
+        public static double ToDegrees(double radians) => radians * 180 / Math.PI;
+        public static double ToRadians(double degrees) => Math.PI * degrees / 180;
     }
 }
