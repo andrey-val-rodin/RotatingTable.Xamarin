@@ -15,7 +15,6 @@ namespace RotatingTable.Xamarin.Draw
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
             StrokeWidth = 1,
-            TextSize = 100,
             IsAntialias = true
         };
 
@@ -72,22 +71,40 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawOval(Rect, _paint);
         }
 
-        protected void DrawText()
+        protected void DrawText(SKPoint pt, string text, int height, SKTextAlign align)
+        {
+            DrawText(pt.X, pt.Y, text, height, align);
+        }
+
+        protected void DrawText(float x, float y, string text, int height, SKTextAlign align)
         {
             _paint.Style = SKPaintStyle.Fill;
             _paint.Shader = null;
             _paint.Color = new SKColor(0, 0, 0);
-            var text = Model.CurrentStep.ToString();
-            var width = _paint.MeasureText(text);
-            Canvas.DrawText(text, -width / 2, _paint.TextSize / 2, _paint);
+            _paint.TextSize = height;
+            _paint.TextAlign = align;
+            Canvas.DrawText(text, x, y, _paint);
+        }
+
+        protected void DrawSector(int startAngle, int endAngle)
+        {
+            var path = new SKPath();
+            path.MoveTo(0, 0);
+            path.ArcTo(Rect, startAngle, endAngle, false);
+            path.LineTo(0, 0);
+
+            _paint.Style = SKPaintStyle.Fill;
+            _paint.Shader = null;
+            _paint.Color = ((Color)Application.Current.Resources["Highlight"]).ToSKColor();
+            Canvas.DrawPath(path, _paint);
         }
 
         protected SKPoint GetCirclePt(int angleDegrees, int raduis)
         {
             return new SKPoint
             {
-                X = (float)Math.Cos(ToRadians(angleDegrees)) * raduis,
-                Y = (float)Math.Sin(ToRadians(angleDegrees)) * raduis
+                X = (float)(Math.Cos(ToRadians(angleDegrees)) * raduis),
+                Y = (float)(Math.Sin(ToRadians(angleDegrees)) * raduis)
             };
         }
 

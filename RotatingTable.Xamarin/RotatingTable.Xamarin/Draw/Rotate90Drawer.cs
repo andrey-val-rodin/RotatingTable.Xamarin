@@ -16,7 +16,6 @@ namespace RotatingTable.Xamarin.Draw
             DrawCircle();
             //DrawSelectedSector(); TODO
             DrawBorder();
-            DrawText();
         }
     }
 }

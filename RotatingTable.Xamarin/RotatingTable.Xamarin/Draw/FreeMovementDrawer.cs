@@ -29,29 +29,19 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawSector();
+            DrawSelectedSector();
             DrawArrow();
+            if (_isDragging)
+                DrawText(-Radius, -Radius + 50, $"{Angle}°", 40, SKTextAlign.Left);
             DrawBorder();
         }
 
-        private void DrawSector()
+        private void DrawSelectedSector()
         {
             if (!_isDragging)
                 return;
 
-            var path = new SKPath();
-            path.MoveTo(0, 0);
-            var angle = Angle;
-            if (angle == 0)
-                angle = 1;
-
-            path.ArcTo(Rect, _startAngle, angle, false);
-            path.LineTo(0, 0);
-
-            _paint.Style = SKPaintStyle.Fill;
-            _paint.Shader = null;
-            _paint.Color = ((Color)Application.Current.Resources["Highlight"]).ToSKColor();
-            Canvas.DrawPath(path, _paint);
+            DrawSector(_startAngle, Angle);
         }
 
         private void DrawArrow()
