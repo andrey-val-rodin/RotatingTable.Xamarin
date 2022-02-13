@@ -3,6 +3,7 @@ using Java.Util;
 using Plugin.BLE.Abstractions.Contracts;
 using RotatingTable.Xamarin.Models;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -221,7 +222,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (System.IO.IOException ex)
             {
-                Console.WriteLine(ex.Message);
+                Debug.WriteLine(ex.Message);
                 return;
             }
 
@@ -236,7 +237,7 @@ namespace RotatingTable.Xamarin.Services
                     // read the input buffer and allocate the number of incoming bytes
                     int bytes = await inStream.ReadAsync(buffer, 0, buffer.Length);
                     var text = UnsafeAsciiBytesToString(buffer);
-                    Console.WriteLine($"Received bytes: {bytes}\tText: '{text}'");
+                    Debug.WriteLine($"Received bytes: {bytes}\tText: '{text}'");
                     // We verify that the bytes contain information
                     if (bytes > 0)
                     {
@@ -256,7 +257,7 @@ namespace RotatingTable.Xamarin.Services
 
         public void EndListening()
         {
-            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource?.Cancel();
         }
     }
 }

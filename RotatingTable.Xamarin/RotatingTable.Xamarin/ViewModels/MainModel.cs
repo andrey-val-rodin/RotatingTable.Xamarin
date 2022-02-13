@@ -1,6 +1,7 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -170,6 +171,7 @@ namespace RotatingTable.Xamarin.ViewModels
                     service.BeginListening((s, a) => OnDataReseived(a.Text));
                     break;
 
+                case (int)Mode.Rotate90:
                 case (int)Mode.FreeMovement:
                     await service.WriteAsync(Commands.RunFreeMovement);
                     response = await service.ReadAsync();
@@ -179,7 +181,6 @@ namespace RotatingTable.Xamarin.ViewModels
                 case (int)Mode.Manual:
                 case (int)Mode.Nonstop:
                 case (int)Mode.Video:
-                case (int)Mode.Rotate90:
                 default:
                     await Application.Current.MainPage.DisplayAlert("",
                         "Не поддерживается пока", "OK");
@@ -189,7 +190,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public void OnDataReseived(string text)
         {
-            Console.WriteLine($"Received text: '{text}'");
+            Debug.WriteLine($"Received text: '{text}'");
             if (text.StartsWith("STEP "))
             {
                 CurrentStep = int.TryParse(text.Substring(5), out int i) ? i : 0;
