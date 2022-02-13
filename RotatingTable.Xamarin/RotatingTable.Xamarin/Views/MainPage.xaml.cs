@@ -56,12 +56,12 @@ namespace RotatingTable.Xamarin.Views
             _selector.GetDrawer((Mode)Model.CurrentMode).Draw(args);
         }
 
-        private void OnCurrentStepChanged(object sender, CurrentStepChangedEventArgs args)
+        private void OnCurrentStepChanged(object sender, CurrentValueChangedEventArgs args)
         {
             canvasView.InvalidateSurface();
         }
 
-        private void OnCurrentPosChanged(object sender, CurrentPosChangedEventArgs args)
+        private void OnCurrentPosChanged(object sender, CurrentValueChangedEventArgs args)
         {
             canvasView.InvalidateSurface();
         }

@@ -22,8 +22,14 @@ namespace RotatingTable.Xamarin.ViewModels
         private string _deviceName;
         private readonly ObservableCollection<DeviceInfo> _deviceNames = new();
         private readonly List<IDevice> _devices = new();
-
         private IAdapter _adapter;
+
+        public ConnectModel()
+        {
+            RefreshCommand = new Command(async () =>
+                await ScanAsync());
+        }
+
         public IAdapter Adapter
         {
             get
@@ -58,12 +64,6 @@ namespace RotatingTable.Xamarin.ViewModels
         }
 
         public Command RefreshCommand { get; }
-
-        public ConnectModel()
-        {
-            RefreshCommand = new Command(async () =>
-                await ScanAsync());
-        }
 
         public async Task<bool> ScanAsync()
         {

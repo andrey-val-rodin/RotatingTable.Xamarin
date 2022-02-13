@@ -23,6 +23,16 @@ namespace RotatingTable.Xamarin.ViewModels
         private int _exposure;
         private int _delay;
 
+        public MainModel()
+        {
+            RunCommand = new Command(async () => await RunAsync());
+            StopCommand = new Command(async () => await Stop());
+            ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
+            ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
+            ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
+            ChangeDelayCommand = new Command(async () => await ChangeDelayAsync());
+        }
+
         // order as in Mode enum
         public string[] Modes => new[]
             {
@@ -57,7 +67,7 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 var oldValue = _currentStep;
                 if (SetProperty(ref _currentStep, value))
-                    CurrentStepChanged?.Invoke(this, new CurrentStepChangedEventArgs(oldValue, _currentStep));
+                    CurrentStepChanged?.Invoke(this, new CurrentValueChangedEventArgs(oldValue, _currentStep));
             }
         }
 
@@ -68,7 +78,7 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 var oldValue = _currentPos;
                 if (SetProperty(ref _currentPos, value))
-                    CurrentPosChanged?.Invoke(this, new CurrentPosChangedEventArgs(oldValue, _currentPos));
+                    CurrentPosChanged?.Invoke(this, new CurrentValueChangedEventArgs(oldValue, _currentPos));
             }
         }
 
@@ -147,16 +157,6 @@ namespace RotatingTable.Xamarin.ViewModels
         public Command ChangeExposureCommand { get; }
         public Command ChangeDelayCommand { get; }
 
-        public MainModel()
-        {
-            RunCommand = new Command(async () => await RunAsync());
-            StopCommand = new Command(() => Stop());
-            ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
-            ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
-            ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
-            ChangeDelayCommand = new Command(async () => await ChangeDelayAsync());
-        }
-
         private async Task RunAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
@@ -174,7 +174,6 @@ namespace RotatingTable.Xamarin.ViewModels
                     await service.WriteAsync(Commands.RunFreeMovement);
                     response = await service.ReadAsync();
                     IsRunning = response == "OK";
-                    service.BeginListening((s, a) => OnDataReseived(a.Text));
                     break;
 
                 case (int)Mode.Manual:
@@ -197,21 +196,28 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             else if (text.StartsWith("POS "))
             {
-                // TODO
+                CurrentPos = int.TryParse(text.Substring(4), out int i) ? i : 0;
             }
-            else if (text == "END")
+//            else if (text == "END") //TODO temporary
+            else if (text.Contains("END")) //TODO temporary
             {
                 // finished
                 var service = DependencyService.Resolve<IBluetoothService>();
                 service.EndListening();
-                IsRunning = false;
+                if (CurrentMode == (int)Mode.Auto) // TODO temporary
+                    IsRunning = false;
+                else
+                    CurrentPos = 0;
             }
         }
 
-        private void Stop()
+        private async Task Stop()
         {
-            //TODO
-            IsRunning = false;
+            var service = DependencyService.Resolve<IBluetoothService>();
+            service.EndListening();
+            await service.WriteAsync(Commands.Stop);
+            var response = await service.ReadAsync();
+            IsRunning = response == "OK";
         }
 
         private async Task ChangeStepsAsync()

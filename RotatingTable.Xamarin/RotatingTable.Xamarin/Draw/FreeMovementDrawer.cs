@@ -13,6 +13,7 @@ namespace RotatingTable.Xamarin.Draw
     {
         private bool _isDragging = false;
         private int _startAngle;
+        private int _oldStartAngle;
         private int _endAngle;
 
         public FreeMovementDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
@@ -38,7 +39,7 @@ namespace RotatingTable.Xamarin.Draw
 
         private void DrawSelectedSector()
         {
-            if (!_isDragging)
+            if (Angle == 0)
                 return;
 
             DrawSector(_startAngle, Angle);
@@ -48,7 +49,7 @@ namespace RotatingTable.Xamarin.Draw
         {
             const int indent = 24;
 
-            if (!_isDragging || Math.Abs(Angle) < 8)
+            if (Math.Abs(Angle) < 8)
                 return;
 
             var path = new SKPath();
@@ -121,6 +122,7 @@ namespace RotatingTable.Xamarin.Draw
                     break;
 
                 case TouchActionType.Released:
+                    _isDragging = false;
                     await StartMovementAsync();
                     break;
 
@@ -139,9 +141,45 @@ namespace RotatingTable.Xamarin.Draw
             var service = DependencyService.Resolve<IBluetoothService>();
             await service.WriteAsync($"FM {Angle}");
             var response = await service.ReadAsync();
-            Model.IsRunning = response == "OK";
-            //service.BeginListening((s, a) => Model.OnDataReseived(a.Text));
-            return true;
+            if (response == "OK")
+            {
+                Model.IsRunning = response == "OK";
+                Model.CurrentPos = 0;
+                _oldStartAngle = _startAngle;
+
+                service.BeginListening((s, a) => OnDataReseived(a.Text));
+                return true;
+            }
+
+            return false;
+        }
+
+        public void OnDataReseived(string text)
+        {
+            Console.WriteLine($"Received text: '{text}'");
+            //            else if (text == "END") //TODO temporary
+            if (text.Contains("END")) //TODO temporary
+            {
+                // finished
+                var service = DependencyService.Resolve<IBluetoothService>();
+Console.WriteLine($"EndListening");
+                service.EndListening();
+                Model.CurrentPos = 0;
+                _startAngle = _endAngle = 0;
+                return;
+            }
+            if (text.StartsWith("POS "))
+            {
+                Model.CurrentPos = int.TryParse(text.Substring(4), out int i) ? i : 0;
+
+//                if (Angle > 0)
+                    _startAngle = _oldStartAngle + Model.CurrentPos;
+//                else
+//                    _startAngle += _oldEndAngle + Model.CurrentPos;
+                Console.WriteLine($"_startAngle: {_startAngle}");
+
+CanvasView.InvalidateSurface(); // TODO
+            }
         }
 
         private SKPoint Transform(Point pt)

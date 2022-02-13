@@ -87,6 +87,17 @@ namespace RotatingTable.Xamarin.Services
 
             await WriteAsync(Commands.Status);
             var response = await ReadAsync();
+            if (response == "RUNNING")
+            {
+                await WriteAsync(Commands.Stop);
+                response = await ReadAsync();
+                if (response != "END")
+                    return false;
+
+                await WriteAsync(Commands.Status);
+                response = await ReadAsync();
+            }
+
             bool success = response == "READY";
             if (success)
             {
