@@ -69,16 +69,16 @@ namespace RotatingTable.Xamarin.Draw
             if (Angle > 0)
             {
                 path.MoveTo(GetCirclePt(EndAngle, Radius - indent));
-                path.LineTo(GetCirclePt(EndAngle - 6, Radius - indent + 4));
-                path.LineTo(GetCirclePt(EndAngle - 6, Radius - indent - 4));
+                path.LineTo(GetCirclePt(EndAngle - 4, Radius - indent + 5));
+                path.LineTo(GetCirclePt(EndAngle - 4, Radius - indent - 5));
                 path.Close();
                 Canvas.DrawPath(path, _paint);
             }
             else
             {
                 path.MoveTo(GetCirclePt(EndAngle, Radius - indent));
-                path.LineTo(GetCirclePt(EndAngle + 6, Radius - indent + 4));
-                path.LineTo(GetCirclePt(EndAngle + 6, Radius - indent - 4));
+                path.LineTo(GetCirclePt(EndAngle + 4, Radius - indent + 5));
+                path.LineTo(GetCirclePt(EndAngle + 4, Radius - indent - 5));
                 path.Close();
                 Canvas.DrawPath(path, _paint);
             }
