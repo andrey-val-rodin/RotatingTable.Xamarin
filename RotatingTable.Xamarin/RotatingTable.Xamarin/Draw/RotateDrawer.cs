@@ -1,4 +1,5 @@
-﻿using RotatingTable.Xamarin.Services;
+﻿using RotatingTable.Xamarin.Models;
+using RotatingTable.Xamarin.Services;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Forms;
@@ -90,36 +91,29 @@ namespace RotatingTable.Xamarin.Draw
                 return false;
 
             var service = DependencyService.Resolve<IBluetoothService>();
-            await service.WriteAsync($"FM {Angle}");
-            var response = await service.ReadAsync();
-            //            if (response == "OK")
-            if (response.Contains("OK")) // TODO
-            {
-                Model.IsRunning = true;
-                Model.CurrentPos = 0;
+            if (!await service.RunFreeMovementAsync())
+                return false;
 
-                service.BeginListening((s, a) => OnDataReseived(a.Text));
-                return true;
-            }
+            if (!await service.RotateAsync(Angle, (s, a) => OnDataReseived(a.Text)))
+                return false;
 
-            return false;
+            Model.IsRunning = true;
+            Model.CurrentPos = 0;
+            return true;
         }
 
         protected void OnDataReseived(string text)
         {
             Debug.WriteLine($"Received text: '{text}'");
-            //            if (text == "END") //TODO temporary
-            if (text.Contains("END")) //TODO temporary
+            if (text == Commands.End)
             {
                 // finished
-                var service = DependencyService.Resolve<IBluetoothService>();
-                service.EndListening();
                 Model.CurrentPos = 0;
                 CanvasView.InvalidateSurface();
                 Clear();
                 return;
             }
-            if (text.StartsWith("POS "))
+            if (text.StartsWith(Commands.Position))
             {
                 Model.CurrentPos = int.TryParse(text.Substring(4), out int i) ? i : 0;
                 _offset = Model.CurrentPos;

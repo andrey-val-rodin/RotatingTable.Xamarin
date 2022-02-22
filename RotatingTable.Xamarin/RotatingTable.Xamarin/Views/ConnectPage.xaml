@@ -12,12 +12,15 @@
                 <Label Text="Стол:" FontAttributes="Bold"/>
                 <Label Text="{Binding DeviceName}"/>
             </StackLayout>
-            <RefreshView IsRefreshing="{Binding IsBusy}"
+            <Label Text="Включите Bluetooth в настройках системы!"
+                   IsVisible="{Binding IsBluetoothDisabled}"
+                   TextColor="Red"/>
+            <RefreshView IsVisible="{Binding IsBluetoothEnabled}" IsRefreshing="{Binding IsBusy}"
                 Command="{Binding RefreshCommand}">
-                <ListView ItemsSource="{Binding DeviceNames}" ItemSelected="ListView_ItemSelected">
+                <ListView ItemsSource="{Binding Devices}" ItemSelected="ListView_ItemSelected">
                     <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="viewmodels:DeviceInfo">
-                            <TextCell Text="{Binding Name}" Detail="{Binding Address}"/>
+                        <DataTemplate x:DataType="viewmodels:DeviceItem">
+                            <TextCell Text="{Binding Name}" Detail="{Binding Id}"/>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>

@@ -1,5 +1,4 @@
-﻿using Android.Bluetooth;
-using RotatingTable.Xamarin.Services;
+﻿using RotatingTable.Xamarin.Services;
 using RotatingTable.Xamarin.ViewModels;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
@@ -17,26 +16,25 @@ namespace RotatingTable.Xamarin.Views
         protected override async void OnAppearing()
         {
             var configService = DependencyService.Resolve<IConfigService>();
-            var address = await configService.GetMacAddressAsync();
+            var id = await configService.GetDeviceIdAsync();
             var connectModel = BindingContext as ConnectModel;
-            connectModel.DeviceName = address;
+            connectModel.DeviceName = id.ToString().Replace("00000000-0000-0000-0000-", "");
             await connectModel.ScanAsync();
         }
 
         private async void ListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)
         {
-            var connectModel = BindingContext as ConnectModel;
-            connectModel.CancelScan();
+            var item = e.SelectedItem as DeviceItem;
+            if (item == null)
+                return;
 
             var service = DependencyService.Resolve<IBluetoothService>();
-            var nativeDevice = connectModel.Devices[e.SelectedItemIndex].NativeDevice as BluetoothDevice;
-            if (!await service.ConnectAsync(nativeDevice.Address))
-            {
-                await Application.Current.MainPage.DisplayAlert("Ошибка",
-                    "Не удаётся установить связь с Bluetooth устройством", "OK");
-            }
+            if (!await service.ConnectAsync(item.Device))
+                ((ListView)sender).SelectedItem = null;
             else
             {
+                var configService = DependencyService.Resolve<IConfigService>();
+                await configService.SetDeviceIdAsync(item.Device.Id);
                 await Shell.Current.GoToAsync("//MainPage");
             }
         }

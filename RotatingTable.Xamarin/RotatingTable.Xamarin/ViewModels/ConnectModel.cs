@@ -1,51 +1,34 @@
-﻿using Android.Bluetooth;
+﻿using Plugin.BLE;
 using Plugin.BLE.Abstractions.Contracts;
-using RotatingTable.Xamarin.Services;
-using System;
-using System.Collections.Generic;
+using Plugin.BLE.Abstractions.EventArgs;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.ViewModels
 {
-    public class DeviceInfo
-    {
-        public string Name { get; set; }
-        public string Address { get; set; }
-    }
-
     public class ConnectModel : NotifyPropertyChangedImpl
     {
         private bool _isBusy = false;
+        private bool _isBluetoothEnabled;
+        private bool _isBluetoothDisabled;
         private string _deviceName;
-        private readonly ObservableCollection<DeviceInfo> _deviceNames = new();
-        private readonly List<IDevice> _devices = new();
-        private IAdapter _adapter;
+        private CancellationTokenSource _cancellationTokenSource;
 
         public ConnectModel()
         {
+            _isBluetoothEnabled = BluetoothLE.IsOn;
+            _isBluetoothDisabled = !_isBluetoothEnabled;
+            BluetoothLE.StateChanged += OnStateChanged;
             RefreshCommand = new Command(async () =>
                 await ScanAsync());
         }
 
-        public IAdapter Adapter
-        {
-            get
-            {
-                if (_adapter == null)
-                {
-                    _adapter = new TemporaryAdapter();
-                }
-                return _adapter;
-                /*
-                var adapter = CrossBluetoothLE.Current.Adapter;
-                BluetoothAdapter nativeAdapter = GetPrivateField<BluetoothAdapter>(adapter, "_bluetoothAdapter");
-                return CrossBluetoothLE.Current.Adapter;
-                */
-            }
-        }
+        private IBluetoothLE BluetoothLE => CrossBluetoothLE.Current;
+
+        private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
 
         public string DeviceName
         {
@@ -53,9 +36,19 @@ namespace RotatingTable.Xamarin.ViewModels
             set => SetProperty(ref _deviceName, value);
         }
 
-        public ObservableCollection<DeviceInfo> DeviceNames { get { return _deviceNames; } }
+        public ObservableCollection<DeviceItem> Devices { get; set; } = new ObservableCollection<DeviceItem>();
 
-        public IReadOnlyList<IDevice> Devices => _devices;
+        public bool IsBluetoothEnabled
+        {
+            get => _isBluetoothEnabled;
+            set => SetProperty(ref _isBluetoothEnabled, value);
+        }
+
+        public bool IsBluetoothDisabled
+        {
+            get => _isBluetoothDisabled;
+            set => SetProperty(ref _isBluetoothDisabled, value);
+        }
 
         public bool IsBusy
         {
@@ -65,79 +58,36 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public Command RefreshCommand { get; }
 
-        public async Task<bool> ScanAsync()
+        private void OnStateChanged(object sender, BluetoothStateChangedArgs e)
         {
-            IsBusy = true;
-            try
+            IsBluetoothEnabled = e.NewState == BluetoothState.On;
+            IsBluetoothDisabled = !_isBluetoothEnabled;
+        }
+
+        public async Task ScanAsync()
+        {
+            Devices.Clear();
+
+            foreach (var connectedDevice in Adapter.ConnectedDevices)
             {
-                _devices.Clear();
-                DeviceNames.Clear();
-                AddKnownDevices();
-
-                Adapter.ScanTimeout = 10000;
-                //Adapter.ScanMode = ScanMode.LowPower;
-                Adapter.ScanTimeoutElapsed += (s, a) => CancelScan();
-                Adapter.DeviceDiscovered += (s, a) =>
-                {
-                    if (_devices.FirstOrDefault((d => 
-                        (d.NativeDevice as BluetoothDevice)?.Address == 
-                        (a.Device.NativeDevice as BluetoothDevice)?.Address)) == null)
-                    {
-                        _devices.Add(a.Device);
-                        DeviceNames.Add(new DeviceInfo
-                        {
-                            Name = GetDeviceName(a.Device),
-                            Address = GetDeviceAddress(a.Device)
-                        });
-                    }
-                };
-
-                await Adapter.StartScanningForDevicesAsync();
-                return true;
+                AddOrUpdateDevice(connectedDevice);
             }
-            catch (Exception e)
-            {
-                IsBusy = false;
-                await Application.Current.MainPage.DisplayAlert("Что-то пошло не так...", e.Message, "OK");
-                return false;
-            }
+
+            Adapter.ScanTimeout = 3000;
+            Adapter.ScanMode = ScanMode.LowLatency;
+            Adapter.ScanTimeoutElapsed += (s, a) => IsBusy = false;
+            Adapter.DeviceDiscovered += (s, a) => AddOrUpdateDevice(a.Device);
+            _cancellationTokenSource = new CancellationTokenSource();
+            await Adapter.StartScanningForDevicesAsync(cancellationToken: _cancellationTokenSource.Token);
         }
 
-        private void AddKnownDevices()
+        private void AddOrUpdateDevice(IDevice device)
         {
-            var knownDevices = TemporaryAdapter.KnownDevises;
-            foreach (var d in knownDevices)
-            {
-                var device = new StubDevice
-                {
-                    Name = d.Name,
-                    Address = d.Address,
-                    NativeDevice = d
-                };
-
-                _devices.Add(device);
-                DeviceNames.Add(new DeviceInfo
-                {
-                    Name = GetDeviceName(device),
-                    Address = GetDeviceAddress(device)
-                });
-            }
-        }
-
-        private string GetDeviceName(IDevice device)
-        {
-            return string.IsNullOrEmpty(device.Name) ? "?" : device.Name;
-        }
-
-        private string GetDeviceAddress(IDevice device)
-        {
-            return (device.NativeDevice as BluetoothDevice).Address;
-        }
-
-        public void CancelScan()
-        {
-            BluetoothAdapter.DefaultAdapter.CancelDiscovery();
-            IsBusy = false;
+            var item = Devices.FirstOrDefault(d => d.Device.Id == device.Id);
+            if (item != null)
+                item.Update(device);
+            else
+                Devices.Add(new DeviceItem(device));
         }
     }
 }

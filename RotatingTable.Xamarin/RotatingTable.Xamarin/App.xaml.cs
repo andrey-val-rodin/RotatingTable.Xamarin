@@ -13,17 +13,8 @@ namespace RotatingTable.Xamarin
             DependencyService.RegisterSingleton<IConfigService>(new ConfigService());
         }
 
-        protected override async void OnStart()
+        protected override void OnStart()
         {
-            var bluetoothService = DependencyService.Resolve<IBluetoothService>();
-            if (!bluetoothService.IsConnected)
-            {
-                var configService = DependencyService.Resolve<IConfigService>();
-                var address = await configService.GetMacAddressAsync();
-                if (string.IsNullOrEmpty(address) ||
-                    !await bluetoothService.ConnectAsync(address))
-                    await Shell.Current.GoToAsync("//ConnectPage");
-            }
         }
 
         protected override void OnSleep()

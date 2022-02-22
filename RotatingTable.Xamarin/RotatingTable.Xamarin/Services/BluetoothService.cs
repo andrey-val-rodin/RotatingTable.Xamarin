@@ -1,10 +1,13 @@
-﻿using Android.Bluetooth;
-using Java.Util;
+﻿using Acr.UserDialogs;
+using Plugin.BLE;
+using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
+using Plugin.BLE.Abstractions.EventArgs;
 using RotatingTable.Xamarin.Models;
 using System;
 using System.Diagnostics;
-using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
@@ -13,142 +16,359 @@ namespace RotatingTable.Xamarin.Services
 {
     public class BluetoothService : IBluetoothService
     {
-        private BluetoothSocket _socket;
-        private static readonly UUID MY_UUID = UUID.FromString("00001101-0000-1000-8000-00805F9B34FB");
-        private CancellationTokenSource _cancellationTokenSource;
+        private static readonly Guid ServiceUuid = new("e7810a71-73ae-499d-8c15-faa9aef0c3f2");
 
-        /*
-        public BluetoothAdapter Adapter
+        private readonly IUserDialogs _userDialogs;
+        private string _response;
+        private readonly object _responseLock = new();
+        private EventHandler<CharacteristicUpdatedEventArgs> _listeningHandler;
+
+        public BluetoothService()
         {
-            get
-            {
-                // Temporary code
-                var adapter = CrossBluetoothLE.Current.Adapter;
-                BluetoothAdapter nativeAdapter = GetPrivateField<BluetoothAdapter>(adapter, "_bluetoothAdapter");
-                return nativeAdapter;
-            }
+            _userDialogs = UserDialogs.Instance;
         }
 
-        // Temporary code
-        public static T GetPrivateField<T>(object obj, string propertyName)
+        private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
+        private ICharacteristic Characteristic { get; set; }
+
+        public bool IsConnected { get; private set; }
+        public bool IsListening { get; private set; }
+
+        public async Task<bool> ConnectAsync(Guid id)
         {
-            return (T)obj.GetType()
-                .GetField(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(obj);
-        }
-        */
-
-        public IDevice Device { get; set; }
-
-        public bool IsConnected => _socket != null && _socket.IsConnected;
-
-        public int Steps { get; set; }
-        public int Acceleration { get; set; }
-        public int Exposure { get; set; }
-        public int Delay { get; set; }
-        /*
-        public bool Connect(IDevice device)
-        {
-            var nativeDevice = device.NativeDevice as BluetoothDevice;
-            if (nativeDevice == null)
-                return false;
-
-            var gattCallback = new StubGattCallback();
-            var bluetoothGatt = nativeDevice.ConnectGatt(Application.Context, false, gattCallback);
-            return bluetoothGatt != null;
-        }
-        */
-        public async Task<bool> ConnectAsync(string address)
-        {
-            if (IsConnected)
-                return true;
-
-            // We start the connection with the arduino
-            var nativeDevice = BluetoothAdapter.DefaultAdapter.GetRemoteDevice(address);
-
-            // We indicate to the adapter that it is no longer visible
-            BluetoothAdapter.DefaultAdapter.CancelDiscovery();
+            CancellationTokenSource tokenSource = new();
+            string error = null;
             try
             {
-                // We start the communication socket with the arduino
-                _socket = nativeDevice.CreateRfcommSocketToServiceRecord(MY_UUID);
-                // We connect the socket
-                _socket.Connect();
-            }
-            catch
-            {
-                try
+                using (var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource)))
                 {
-                    _socket.Close();
+                    IDevice device = await ConnectToDeviceAsync(id, tokenSource.Token);
+                    if (device == null)
+                        return false;
+
+                    error = await DoConnectSteps(device, tokenSource.Token);
+                    return IsConnected;
                 }
-                catch {}
-
-                return false;
             }
-
-            await WriteAsync(Commands.Status);
-            var response = await ReadAsync();
-            if (response == "RUNNING")
+            finally
             {
-                await WriteAsync(Commands.Stop);
-                response = await ReadAsync();
-                if (response != "END")
-                    return false;
-
-                await WriteAsync(Commands.Status);
-                response = await ReadAsync();
+                tokenSource.Dispose();
+                if (!string.IsNullOrEmpty(error))
+                    await _userDialogs.AlertAsync(error);
             }
-
-            bool success = response == "READY";
-            if (success)
-            {
-                var service = DependencyService.Resolve<IConfigService>();
-                await service.SetMacAddressAsync(nativeDevice.Address);
-            }
-
-            return success && await ReadConfigurationAsync();
         }
 
-        public async Task WriteAsync(string text)
+        public async Task<bool> ConnectAsync(IDevice device)
         {
-            if (!IsConnected)
-                throw new InvalidOperationException("Bluetooth service is not connected");
-
-            var stream = _socket.OutputStream;
-
-            // Create the string that we will send
-            var message = new Java.Lang.String(text);
-            // Convert it to bytes
-            byte[] msgBuffer = message.GetBytes();
-            // Write the array we just generated to the buffer
-            await stream.WriteAsync(msgBuffer, 0, msgBuffer.Length);
-        }
-
-        public async Task<string> ReadAsync()
-        {
-            if (!IsConnected)
-                throw new InvalidOperationException("Bluetooth service is not connected");
-
-            var stream = _socket.InputStream;
-            byte[] buffer = new byte[1024];
-            string result = null;
+            Monitor.Enter(this);
+            CancellationTokenSource tokenSource = new();
+            string error = null;
             try
             {
-                // Read the input buffer and allocate the number of incoming bytes
-                var bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
-                // We verify that the bytes contain information
-                if (bytes > 0)
+                using (var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource)))
                 {
-                        // Convert the value of the information received to a string
-                        result = UnsafeAsciiBytesToString(buffer);
+                    if (!await ConnectToDeviceAsync(device, tokenSource.Token))
+                        return false;
+
+                    error = await DoConnectSteps(device, tokenSource.Token);
+                    return IsConnected;
                 }
             }
-            catch (Java.IO.IOException)
+            finally
             {
+                tokenSource.Dispose();
+                if (!string.IsNullOrEmpty(error))
+                    await _userDialogs.AlertAsync(error);
+            }
+        }
+
+        private async Task<IDevice> ConnectToDeviceAsync(Guid id, CancellationToken token)
+        {
+            try
+            {
+                var device = await Adapter.ConnectToKnownDeviceAsync(id,
+                    new ConnectParameters(false, forceBleTransport: true), token);
+
+                return device;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                if (!token.IsCancellationRequested)
+                    await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
             }
+        }
 
-            return result;
+        private async Task<bool> ConnectToDeviceAsync(IDevice device, CancellationToken token)
+        {
+            try
+            {
+                await Adapter.ConnectToDeviceAsync(device,
+                    new ConnectParameters(false, forceBleTransport: true), token);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                if (!token.IsCancellationRequested)
+                    await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+                return false;
+            }
+        }
+
+        private async Task<string> DoConnectSteps(IDevice device, CancellationToken token)
+        {
+            var service = await LoadService(device, token);
+            if (service == null)
+                return $"Сервис {ServiceUuid} не найден";
+
+            Characteristic = await LoadCharacteristics(service, token);
+            if (Characteristic == null)
+                return "Характеристика не обнаружена";
+
+            IsConnected = true;
+            var response = await GetStatusAsync();
+            if (response == "RUNNING")
+            {
+                // TODO: ask the user if app should stop table
+                // Try to stop and ask for status again
+                if (!await StopAsync())
+                {
+                    IsConnected = false;
+                    return "Перегрузите стол и повторите попытку подключения позже";
+                }
+
+                response = await GetStatusAsync();
+            }
+
+            if (response != Commands.StatusReady)
+            {
+                IsConnected = false;
+                return string.IsNullOrEmpty(response)
+                    ? "Стол не отвечает"
+                    : $"Неизвестный ответ стола: {response}";
+            }
+
+            // Save config
+            var configService = DependencyService.Resolve<IConfigService>();
+            if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
+                !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
+                !await SetDelayAsync(await configService.GetDelayAsync()) ||
+                !await SetExposureAsync(await configService.GetExposureAsync()))
+            {
+                IsConnected = false;
+                return "Не удалось передать столу параметры";
+            }
+
+            return null;
+        }
+
+        private ProgressDialogConfig CreateDialogConfig(CancellationTokenSource tokenSource)
+        {
+            return new ProgressDialogConfig()
+            {
+                Title = $"Соединение...",
+                CancelText = "Отмена",
+                IsDeterministic = false,
+                OnCancel = tokenSource.Cancel
+            };
+        }
+
+        private async Task<IService> LoadService(IDevice device, CancellationToken token)
+        {
+            try
+            {
+                var services = await device.GetServicesAsync(token);
+                return services.FirstOrDefault(s => s.Id == ServiceUuid);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return null;
+            }
+        }
+
+        private async Task<ICharacteristic> LoadCharacteristics(IService service, CancellationToken token)
+        {
+            try
+            {
+                var characteristics = await service.GetCharacteristicsAsync();
+                return characteristics.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return null;
+            }
+        }
+
+        private async Task<string> WriteWithResponseAsync(string text)
+        {
+            try
+            {
+                _response = null;
+                await BeginListeningAsync(OnCharacteristicValueUpdated);
+                await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text));
+                var token = new CancellationTokenSource(200).Token;
+                string response = null;
+                await Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        response = GetResponse();
+                        if (!string.IsNullOrEmpty(response) || token.IsCancellationRequested)
+                            return;
+                    }
+                }, token);
+
+                if (string.IsNullOrEmpty(response))
+                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                return null;
+            }
+            finally
+            {
+                await EndListeningAsync();
+            }
+        }
+
+        private string GetResponse()
+        {
+            lock (_responseLock)
+            {
+                return _response;
+            }
+        }
+
+        private void OnCharacteristicValueUpdated(object sender, CharacteristicUpdatedEventArgs args)
+        {
+            lock (_responseLock)
+            {
+                _response = UnsafeAsciiBytesToString(args.Characteristic.Value);
+                Debug.WriteLine(_response);
+            }
+        }
+
+        private async Task BeginListeningAsync(EventHandler<CharacteristicUpdatedEventArgs> handler)
+        {
+            if (IsListening)
+                throw new InvalidOperationException("Listen already");
+
+            _listeningHandler = handler;
+            Characteristic.ValueUpdated += _listeningHandler;
+            IsListening = true;
+            await Characteristic.StartUpdatesAsync();
+        }
+
+        private async Task EndListeningAsync()
+        {
+            await Characteristic.StopUpdatesAsync();
+            Characteristic.ValueUpdated -= _listeningHandler;
+            IsListening = false;
+        }
+
+        public async Task<string> GetStatusAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await WriteWithResponseAsync(Commands.Status);
+        }
+
+        public async Task<bool> RunAutoModeAsync(EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.RunAutoMode, eventHandler);
+        }
+
+        public async Task<bool> RunFreeMovementAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.RunFreeMovement);
+        }
+
+        public async Task<bool> RotateAsync(int angle, EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.FreeMovement + angle, eventHandler);
+        }
+
+        public async Task<bool> StopAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await WriteWithResponseAsync(Commands.Stop) == Commands.End;
+        }
+
+        private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
+        {
+            var response = await WriteWithResponseAsync(command);
+            if (response != Commands.OK)
+                return false;
+
+            if (eventHandler != null)
+                await BeginListeningAsync(async (s, a) =>
+                  {
+                      var text = UnsafeAsciiBytesToString(a.Characteristic.Value);
+                      Debug.WriteLine(text);
+                      eventHandler.Invoke(this, new DeviceInputEventArgs(text));
+                      if (text == Commands.End)
+                          await EndListeningAsync();
+                    // TODO: what happens if input never get "END"? - add here timeout for input
+                    // Timer class?
+                });
+
+            return true;
+        }
+
+        public async Task<bool> SetStepsAsync(int steps)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetSteps + ' ' + steps.ToString();
+            return await WriteWithResponseAsync(command) == Commands.OK;
+        }
+
+        public async Task<bool> SetAccelerationAsync(int acceleration)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetAcceleration + ' ' + acceleration.ToString();
+            return await WriteWithResponseAsync(command) == Commands.OK;
+        }
+
+        public async Task<bool> SetDelayAsync(int delay)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetDelay + ' ' + delay.ToString();
+            return await WriteWithResponseAsync(command) == Commands.OK;
+        }
+
+        public async Task<bool> SetExposureAsync(int exposure)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetExposure + ' ' + exposure.ToString();
+            return await WriteWithResponseAsync(command) == Commands.OK;
         }
 
         private string UnsafeAsciiBytesToString(byte[] buffer)
@@ -166,98 +386,6 @@ namespace RotatingTable.Xamarin.Services
                     return new string((sbyte*)pAscii, 0, end);
                 }
             }
-        }
-
-        private async Task<bool> ReadConfigurationAsync()
-        {
-            await WriteAsync(Commands.GetSteps);
-            var response = await ReadAsync();
-            if (!int.TryParse(response, out int steps))
-                return false;
-
-            await WriteAsync(Commands.GetAcceleration);
-            response = await ReadAsync();
-            if (!int.TryParse(response, out int acceleration))
-                return false;
-
-            await WriteAsync(Commands.GetExposure);
-            response = await ReadAsync();
-            if (!int.TryParse(response, out int exposure))
-                return false;
-
-            await WriteAsync(Commands.GetDelay);
-            response = await ReadAsync();
-            if (!int.TryParse(response, out int delay))
-                return false;
-
-            Steps = steps;
-            Acceleration = acceleration;
-            Exposure = exposure;
-            Delay = delay;
-
-            return true;
-        }
-
-        //Event to initialize the thread that will listen to bluetooth requests
-        public void BeginListening(EventHandler<DeviceInputEventArgs> eventHandler)
-        {
-            if (eventHandler == null)
-                throw new ArgumentNullException(nameof(eventHandler));
-
-            _cancellationTokenSource = new();
-            var token = _cancellationTokenSource.Token;
-
-            // We create a thread that will be running in the background which will check if there is any data
-            //by the arduino
-            Task.Factory.StartNew(async () => await ReadStreamAsync(eventHandler, token));
-        }
-
-        private async Task ReadStreamAsync(EventHandler<DeviceInputEventArgs> eventHandler, CancellationToken token)
-        {
-            // We extract the input stream
-            Stream inStream;
-            try
-            {
-                inStream = _socket.InputStream;
-            }
-            catch (System.IO.IOException ex)
-            {
-                Debug.WriteLine(ex.Message);
-                return;
-            }
-
-            while (true)
-            {
-                if (token.IsCancellationRequested)
-                    return;
-
-                try
-                {
-                    byte[] buffer = new byte[80]; // will fill with zeroes
-                    // read the input buffer and allocate the number of incoming bytes
-                    int bytes = await inStream.ReadAsync(buffer, 0, buffer.Length);
-                    var text = UnsafeAsciiBytesToString(buffer);
-                    Debug.WriteLine($"Received bytes: {bytes}\tText: '{text}'");
-                    // We verify that the bytes contain information
-                    if (bytes > 0)
-                    {
-                        //                            // We run in the main interface
-                        //                            RunOnUiThread(() =>
-                        //                            {
-                        eventHandler?.Invoke(this, new DeviceInputEventArgs { Text = text });
-                        //                            });
-                    }
-                }
-                catch (Java.IO.IOException)
-                {
-                    throw;
-                }
-            }
-        }
-
-        public void EndListening()
-        {
-            _cancellationTokenSource?.Cancel();
         }
     }
 }

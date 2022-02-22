@@ -34,21 +34,18 @@ namespace RotatingTable.Xamarin.Views
         protected override async void OnAppearing()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
+            var configService = DependencyService.Resolve<IConfigService>();
             if (!service.IsConnected)
             {
-                var configService = DependencyService.Resolve<IConfigService>();
-                var address = await configService.GetMacAddressAsync();
-                if (!string.IsNullOrEmpty(address))
-                    await service.ConnectAsync(address);
+                var id = await configService.GetDeviceIdAsync();
+                if (id != Guid.Empty)
+                    await service.ConnectAsync(id);
             }
 
             if (service.IsConnected)
-            {
-                Model.StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == service.Steps);
-                Model.Acceleration = service.Acceleration;
-                Model.Exposure = service.Exposure / 100;
-                Model.Delay = service.Delay / 100;
-            }
+                await Model.InitAsync();
+            else
+                await Shell.Current.GoToAsync("//ConnectPage");
         }
 
         private void OnCanvasViewPaintSurface(object sender, SKPaintSurfaceEventArgs args)

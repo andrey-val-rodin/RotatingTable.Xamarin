@@ -7,16 +7,18 @@ namespace RotatingTable.Xamarin.Services
     public interface IBluetoothService
     {
         bool IsConnected { get; }
-        IDevice Device { get; set; }
-        int Steps { get; set; }
-        int Acceleration { get; set; }
-        int Exposure { get; set; }
-        int Delay { get; set; }
+        bool IsListening { get; }
 
-        Task<bool> ConnectAsync(string address);
-        Task<string> ReadAsync();
-        Task WriteAsync(string text);
-        void BeginListening(EventHandler<DeviceInputEventArgs> eventHandler);
-        void EndListening();
+        Task<bool> ConnectAsync(Guid id);
+        Task<bool> ConnectAsync(IDevice device);
+        Task<string> GetStatusAsync();
+        Task<bool> RunAutoModeAsync(EventHandler<DeviceInputEventArgs> eventHandler);
+        Task<bool> RunFreeMovementAsync();
+        Task<bool> RotateAsync(int angle, EventHandler<DeviceInputEventArgs> eventHandler);
+        Task<bool> SetAccelerationAsync(int acceleration);
+        Task<bool> SetDelayAsync(int delay);
+        Task<bool> SetExposureAsync(int exposure);
+        Task<bool> SetStepsAsync(int steps);
+        Task<bool> StopAsync();
     }
 }

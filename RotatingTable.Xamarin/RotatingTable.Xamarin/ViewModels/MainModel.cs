@@ -102,7 +102,7 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             get
             {
-                return CheckSteps() ? StepValues[StepsIndex] : 0;
+                return StepValues[StepsIndex];
             }
         }
 
@@ -158,24 +158,36 @@ namespace RotatingTable.Xamarin.ViewModels
         public Command ChangeExposureCommand { get; }
         public Command ChangeDelayCommand { get; }
 
+        public async Task InitAsync()
+        {
+            var service = DependencyService.Resolve<IBluetoothService>();
+            var configService = DependencyService.Resolve<IConfigService>();
+            if (service.IsConnected)
+            {
+                var steps = await configService.GetStepsAsync();
+                var acceleration = await configService.GetAccelerationAsync();
+                var delay = await configService.GetDelayAsync();
+                var exposure = await configService.GetExposureAsync();
+
+                StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == steps);
+                Acceleration = acceleration;
+                Exposure = exposure / 100;
+                Delay = delay / 100;
+            }
+        }
+
         private async Task RunAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            string response;
             switch (CurrentMode)
             {
                 case (int)Mode.Auto:
-                    await service.WriteAsync(Commands.RunAutoMode);
-                    response = await service.ReadAsync();
-                    IsRunning = response == "OK";
-                    service.BeginListening((s, a) => OnDataReseived(a.Text));
+                    IsRunning = await service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
                     break;
 
                 case (int)Mode.Rotate90:
                 case (int)Mode.FreeMovement:
-                    await service.WriteAsync(Commands.RunFreeMovement);
-                    response = await service.ReadAsync();
-                    IsRunning = response == "OK";
+                    IsRunning = await service.RunFreeMovementAsync();
                     break;
 
                 case (int)Mode.Manual:
@@ -191,169 +203,143 @@ namespace RotatingTable.Xamarin.ViewModels
         public void OnDataReseived(string text)
         {
             Debug.WriteLine($"Received text: '{text}'");
-            if (text.StartsWith("STEP "))
+            if (text.StartsWith(Commands.Step))
             {
-                CurrentStep = int.TryParse(text.Substring(5), out int i) ? i : 0;
+                CurrentStep = int.TryParse(text.Substring(Commands.Step.Length), out int i) ? i : 0;
             }
-            else if (text.StartsWith("POS "))
+            else if (text.StartsWith(Commands.Position))
             {
-                CurrentPos = int.TryParse(text.Substring(4), out int i) ? i : 0;
+                CurrentPos = int.TryParse(text.Substring(Commands.Position.Length), out int i) ? i : 0;
             }
-//            else if (text == "END") //TODO temporary
-            else if (text.Contains("END")) //TODO temporary
+            else if (text == Commands.End)
             {
                 // finished
-                var service = DependencyService.Resolve<IBluetoothService>();
-                service.EndListening();
-                if (CurrentMode == (int)Mode.Auto) // TODO temporary
-                    IsRunning = false;
-                else
-                    CurrentPos = 0;
+                IsRunning = false;
+                CurrentStep = 0;
+                CurrentPos = 0;
             }
         }
 
         private async Task Stop()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            service.EndListening();
-            await service.WriteAsync(Commands.Stop);
-            var response = await service.ReadAsync();
-            IsRunning = response == "OK";
+            IsRunning = await service.StopAsync();
         }
 
         private async Task ChangeStepsAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!CheckSteps())
+            var configService = DependencyService.Resolve<IConfigService>();
+            var oldSteps = await configService.GetStepsAsync();
+            var newSteps = StepValues[StepsIndex];
+
+            if (newSteps == oldSteps)
+                return;
+
+            if (!ConfigValidator.IsStepsValid(Steps))
             {
                 // Back to old value
-                StepsIndex = Array.FindIndex(StepValues, e => e == service.Steps);
+                StepsIndex = Array.FindIndex(StepValues, e => e == oldSteps);
                 return;
             }
 
-            var newSteps = StepValues[StepsIndex];
-            if (newSteps == service.Steps)
-                return;
-
-            var command = Commands.SetSteps + ' ' + newSteps.ToString();
-            await service.WriteAsync(command);
-            var response = await service.ReadAsync();
-            if (response == "OK")
+            if (await service.SetStepsAsync(newSteps))
             {
-                // success
-                service.Steps = newSteps;
+                // Store in persistent memory
+                await configService.SetStepsAsync(newSteps);
             }
             else
             {
                 // Back to old value
-                StepsIndex = Array.FindIndex(StepValues, e => e == service.Steps);
+                StepsIndex = Array.FindIndex(StepValues, e => e == oldSteps);
             }
         }
 
         private async Task ChangeAccelerationAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!CheckAcceleration())
-            {
-                // Back to old value
-                Acceleration = service.Acceleration;
-            }
-
+            var configService = DependencyService.Resolve<IConfigService>();
+            var oldAcceleration = await configService.GetAccelerationAsync();
             var newAcceleration = Acceleration;
-            if (newAcceleration == service.Acceleration)
+
+            if (newAcceleration == oldAcceleration)
                 return;
 
-            var command = Commands.SetAcceleration + ' ' + newAcceleration.ToString();
-            await service.WriteAsync(command);
-            var response = await service.ReadAsync();
-            if (response == "OK")
+            if (!ConfigValidator.IsAccelerationValid(newAcceleration))
             {
-                // success
-                service.Acceleration = newAcceleration;
+                // Back to old value
+                Acceleration = oldAcceleration;
+                return;
+            }
+
+            if (await service.SetAccelerationAsync(newAcceleration))
+            {
+                // Store in persistent memory
+                await configService.SetAccelerationAsync(newAcceleration);
             }
             else
             {
                 // Back to old value
-                Acceleration = service.Acceleration;
+                Acceleration = oldAcceleration;
             }
         }
 
         private async Task ChangeExposureAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!CheckExposure())
+            var configService = DependencyService.Resolve<IConfigService>();
+            var oldExposure = await configService.GetExposureAsync();
+            var newExposure = Exposure * 100;
+            
+            if (newExposure == oldExposure)
+                return;
+
+            if (!ConfigValidator.IsExposureValid(newExposure))
             {
                 // Back to old value
-                Exposure = service.Exposure / 100;
+                Exposure = oldExposure / 100;
                 return;
             }
 
-            var newExposure = Exposure * 100;
-            if (newExposure == service.Exposure)
-                return;
-
-            var command = Commands.SetExposure + ' ' + newExposure.ToString();
-            await service.WriteAsync(command);
-            var response = await service.ReadAsync();
-            if (response == "OK")
+            if (await service.SetExposureAsync(newExposure))
             {
-                // success
-                service.Exposure = newExposure;
+                // Store in persistent memory
+                await configService.SetExposureAsync(newExposure);
             }
             else
             {
                 // Back to old value
-                Exposure = service.Exposure / 100;
+                Exposure = oldExposure / 100;
             }
         }
 
         private async Task ChangeDelayAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!CheckDelay())
+            var configService = DependencyService.Resolve<IConfigService>();
+            var oldDelay = await configService.GetDelayAsync();
+            var newDelay = Delay * 100;
+
+            if (newDelay == oldDelay)
+                return;
+
+            if (!ConfigValidator.IsDelayValid(newDelay))
             {
                 // Back to old value
-                Delay = service.Delay / 100;
+                Delay = oldDelay / 100;
                 return;
             }
 
-            var newDelay = Delay * 100;
-            if (newDelay == service.Delay)
-                return;
-
-            var command = Commands.SetDelay + ' ' + newDelay.ToString();
-            await service.WriteAsync(command);
-            var response = await service.ReadAsync();
-            if (response == "OK")
+            if (await service.SetDelayAsync(newDelay))
             {
-                // success
-                service.Delay = newDelay;
+                // Store in persistent memory
+                await configService.SetDelayAsync(newDelay);
             }
             else
             {
                 // Back to old value
-                Delay = service.Delay / 100;
+                Delay = oldDelay / 100;
             }
-        }
-
-        private bool CheckSteps()
-        {
-            return 0 <= StepsIndex && StepsIndex <= StepValues.Length;
-        }
-
-        private bool CheckAcceleration()
-        {
-            return 1 <= Acceleration && Acceleration <= 10;
-        }
-
-        private bool CheckExposure()
-        {
-            return 1 <= Exposure && Exposure <= 5;
-        }
-
-        private bool CheckDelay()
-        {
-            return 0 <= Delay && Delay <= 50;
         }
     }
 }

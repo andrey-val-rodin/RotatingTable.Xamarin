@@ -4,6 +4,7 @@ using Android.Runtime;
 using Android.OS;
 using Xamarin.Essentials;
 using Android;
+using Acr.UserDialogs;
 
 namespace RotatingTable.Xamarin.Droid
 {
@@ -24,6 +25,7 @@ namespace RotatingTable.Xamarin.Droid
         {
             base.OnCreate(savedInstanceState);
 
+            UserDialogs.Init(this);
             Platform.Init(this, savedInstanceState);
             global::Xamarin.Forms.Forms.Init(this, savedInstanceState);
             CheckPermissions();
