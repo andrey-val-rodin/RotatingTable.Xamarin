@@ -7,7 +7,7 @@ using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.Draw
 {
-    public class BaseDrawer
+    public abstract class BaseDrawer
     {
         protected readonly SKPaint _paint = new()
         {
@@ -111,6 +111,8 @@ namespace RotatingTable.Xamarin.Draw
         public virtual void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
         }
+
+        public abstract void Clear();
 
         public static double ToDegrees(double radians) => radians * 180 / Math.PI;
         public static double ToRadians(double degrees) => Math.PI * degrees / 180;

@@ -128,7 +128,7 @@ namespace RotatingTable.Xamarin.Draw
             return point;
         }
 
-        protected virtual void Clear()
+        public override void Clear()
         {
             _isDragging = false;
             _offset = 0;

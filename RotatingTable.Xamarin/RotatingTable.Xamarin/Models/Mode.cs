@@ -1,12 +1,14 @@
 ﻿namespace RotatingTable.Xamarin.Models
 {
-    public enum Mode
+    public enum Mode : int
     {
-        Auto = 0,
+        First = 0,
+        Auto = First,
         Manual = 1,
         Nonstop = 2,
         Video = 3,
         Rotate90 = 4,
-        FreeMovement = 5
+        FreeMovement = 5,
+        Last = FreeMovement
     };
 }

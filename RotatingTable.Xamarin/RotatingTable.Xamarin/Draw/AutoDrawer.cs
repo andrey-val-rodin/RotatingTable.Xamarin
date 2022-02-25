@@ -19,5 +19,9 @@ namespace RotatingTable.Xamarin.Draw
             DrawBorder();
             DrawText(0, 40, Model.CurrentStep.ToString(), 100, SKTextAlign.Center);
         }
+
+        public override void Clear()
+        {
+        }
     }
 }

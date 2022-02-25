@@ -29,6 +29,7 @@ namespace RotatingTable.Xamarin.Views
             _selector = new(canvasView, Model);
             Model.CurrentStepChanged += OnCurrentStepChanged;
             Model.CurrentPosChanged += OnCurrentPosChanged;
+            Model.Stop += OnStop;
         }
 
         protected override async void OnAppearing()
@@ -66,6 +67,11 @@ namespace RotatingTable.Xamarin.Views
         void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
             _selector.GetDrawer((Mode)Model.CurrentMode).OnTouchEffectAction(sender, args);
+        }
+
+        private void OnStop(object sender, EventArgs args)
+        {
+            _selector.Clear();
         }
     }
 }

@@ -108,7 +108,7 @@ namespace RotatingTable.Xamarin.Draw
             }
         }
 
-        protected override void Clear()
+        public override void Clear()
         {
             base.Clear();
             _startQuadrant = _endQuadrant = -1;

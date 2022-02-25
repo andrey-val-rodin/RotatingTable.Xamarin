@@ -1,20 +1,19 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp.Views.Forms;
+using System;
 
 namespace RotatingTable.Xamarin.Draw
 {
     public class Selector
     {
-        private readonly AutoDrawer _autoDrawer;
-        private readonly Rotate90Drawer _rotate90Drawer;
-        private readonly FreeMovementDrawer _freeMovementDrawer;
+        private readonly BaseDrawer[] _drawers = new BaseDrawer[(int)Mode.Last + 1];
 
         public Selector(SKCanvasView canvasView, MainModel model)
         {
-            _autoDrawer = new(canvasView, model);
-            _rotate90Drawer = new(canvasView, model);
-            _freeMovementDrawer = new(canvasView, model);
+            _drawers[(int)Mode.Auto] = new AutoDrawer(canvasView, model);
+            _drawers[(int)Mode.Rotate90] = new Rotate90Drawer(canvasView, model);
+            _drawers[((int)Mode.FreeMovement)] = new FreeMovementDrawer(canvasView, model);
         }
 
         public BaseDrawer GetDrawer(Mode mode)
@@ -22,17 +21,28 @@ namespace RotatingTable.Xamarin.Draw
             switch (mode)
             {
                 case Mode.Auto:
-                    return _autoDrawer;
+                    return _drawers[(int)Mode.Auto];
                 case Mode.Rotate90:
-                    return _rotate90Drawer;
+                    return _drawers[(int)Mode.Rotate90];
                 case Mode.FreeMovement:
-                    return _freeMovementDrawer;
-
+                    return _drawers[(int)Mode.FreeMovement];
                 case Mode.Manual:
+                    return _drawers[(int)Mode.Manual];
                 case Mode.Nonstop:
+                    return _drawers[(int)Mode.Nonstop];
                 case Mode.Video:
+                    return _drawers[(int)Mode.Video];
                 default:
-                    return null;
+                    throw new InvalidOperationException("Unknown mode");
+            }
+        }
+
+        public void Clear()
+        {
+            foreach (var drawer in _drawers)
+            {
+                if (drawer != null)
+                    drawer.Clear();
             }
         }
     }

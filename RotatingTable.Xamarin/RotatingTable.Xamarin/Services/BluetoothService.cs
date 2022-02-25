@@ -22,7 +22,7 @@ namespace RotatingTable.Xamarin.Services
         private string _response;
         private readonly object _responseLock = new();
         private EventHandler<CharacteristicUpdatedEventArgs> _listeningHandler;
-        private readonly ListeningStream _listeningStream = new ();
+        private ListeningStream _listeningStream;
 
         public BluetoothService()
         {
@@ -130,27 +130,9 @@ namespace RotatingTable.Xamarin.Services
                 return "Характеристика не обнаружена";
 
             IsConnected = true;
-            var response = await GetStatusAsync();
-            if (response == "RUNNING")
-            {
-                // TODO: ask the user if app should stop table
-                // Try to stop and ask for status again
-                if (!await StopAsync())
-                {
-                    IsConnected = false;
-                    return "Перегрузите стол и повторите попытку подключения позже";
-                }
-
-                response = await GetStatusAsync();
-            }
-
-            if (response != Commands.StatusReady)
-            {
-                IsConnected = false;
-                return string.IsNullOrEmpty(response)
-                    ? "Стол не отвечает"
-                    : $"Неизвестный ответ стола: {response}";
-            }
+            var response = await CheckStatus();
+            if (!string.IsNullOrEmpty(response))
+                return response;
 
             // Save config
             var configService = DependencyService.Resolve<IConfigService>();
@@ -170,7 +152,7 @@ namespace RotatingTable.Xamarin.Services
         {
             return new ProgressDialogConfig()
             {
-                Title = $"Соединение...",
+                Title = "Соединение...",
                 CancelText = "Отмена",
                 IsDeterministic = false,
                 OnCancel = tokenSource.Cancel
@@ -205,6 +187,58 @@ namespace RotatingTable.Xamarin.Services
             }
         }
 
+        private async Task<string> CheckStatus()
+        {
+            var response = await GetStatusAsync();
+            if (response == "RUNNING")
+            {
+                // Ask the user if app should stop table
+                var result = await _userDialogs.PromptAsync(new PromptConfig
+                {
+                    Text = "Стол в процессе работы. Завершить?",
+                    CancelText = "Отмена",
+                    OkText = "Да"
+                });
+
+                if (result.Ok)
+                {
+                    if (!await StopAsync())
+                    {
+                        IsConnected = false;
+                        return "Перезагрузите стол и повторите попытку подключения позже";
+                    }
+
+                    response = await GetStatusAsync();
+                }
+                else
+                {
+                    IsConnected = false;
+                    return null;
+                }
+            }
+            else if (response == "BUSY")
+            {
+                // Try to stop and then ask table for status again
+                if (!await StopAsync())
+                {
+                    IsConnected = false;
+                    return "Перегрузите стол и повторите попытку подключения позже";
+                }
+
+                response = await GetStatusAsync();
+            }
+
+            if (response != Commands.StatusReady)
+            {
+                IsConnected = false;
+                return string.IsNullOrEmpty(response)
+                    ? "Стол не отвечает"
+                    : $"Неизвестный ответ стола: {response}";
+            }
+
+            return null;
+        }
+
         private async Task<string> WriteWithResponseAsync(string text)
         {
             System.Diagnostics.Debug.WriteLine("Write: " + text);
@@ -216,7 +250,7 @@ namespace RotatingTable.Xamarin.Services
                 _response = null;
                 await BeginListeningAsync(OnCharacteristicValueUpdated);
                 await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text));
-                var token = new CancellationTokenSource(200).Token;
+                var token = new CancellationTokenSource(500).Token;
                 string response = null;
                 await Task.Run(() =>
                 {
@@ -274,6 +308,7 @@ namespace RotatingTable.Xamarin.Services
             if (IsListening)
                 throw new InvalidOperationException("Listen already");
 
+            _listeningStream = new();
             _listeningHandler = handler;
             Characteristic.ValueUpdated += _listeningHandler;
             IsListening = true;
@@ -284,6 +319,7 @@ namespace RotatingTable.Xamarin.Services
         {
             await Characteristic.StopUpdatesAsync();
             Characteristic.ValueUpdated -= _listeningHandler;
+            _listeningStream = null;
             IsListening = false;
         }
 
@@ -324,7 +360,10 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteWithResponseAsync(Commands.Stop) == Commands.End;
+            if (IsListening)
+                await EndListeningAsync();
+
+            return await WriteWithResponseAsync(Commands.Stop) == Commands.OK;
         }
 
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)

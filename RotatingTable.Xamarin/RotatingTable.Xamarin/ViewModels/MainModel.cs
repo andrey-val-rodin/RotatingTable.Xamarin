@@ -11,6 +11,7 @@ namespace RotatingTable.Xamarin.ViewModels
     {
         public event CurrentStepChangedEventHandler CurrentStepChanged;
         public event CurrentPosChangedEventHandler CurrentPosChanged;
+        public event StopEventHandler Stop;
 
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
@@ -27,7 +28,7 @@ namespace RotatingTable.Xamarin.ViewModels
         public MainModel()
         {
             RunCommand = new Command(async () => await RunAsync());
-            StopCommand = new Command(async () => await Stop());
+            StopCommand = new Command(async () => await StopAsync());
             ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
             ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
             ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
@@ -220,10 +221,18 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        private async Task Stop()
+        private async Task StopAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            IsRunning = await service.StopAsync();
+            CurrentStep = 0;
+            CurrentPos = 0;
+            if (await service.StopAsync())
+                IsRunning = false;
+            else
+            {
+                //TODO what to do here?
+            }
+            Stop?.Invoke(this, EventArgs.Empty);
         }
 
         private async Task ChangeStepsAsync()

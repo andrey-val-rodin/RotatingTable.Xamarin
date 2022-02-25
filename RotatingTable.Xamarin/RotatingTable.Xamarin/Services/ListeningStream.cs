@@ -6,8 +6,7 @@ namespace RotatingTable.Xamarin.Services
     public class ListeningStream
     {
         private MemoryStream _internalStream = new();
-        private byte[] _buffer = new byte[1000];
-        private bool disposedValue;
+        private byte[] _buffer = new byte[1024];
 
         public long Length
         {

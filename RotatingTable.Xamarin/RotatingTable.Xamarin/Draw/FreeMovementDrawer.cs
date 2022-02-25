@@ -1,6 +1,5 @@
 ﻿using RotatingTable.Xamarin.TouchTracking;
 using RotatingTable.Xamarin.ViewModels;
-using SkiaSharp;
 using SkiaSharp.Views.Forms;
 using System;
 
@@ -75,7 +74,7 @@ namespace RotatingTable.Xamarin.Draw
             }
         }
 
-        protected override void Clear()
+        public override void Clear()
         {
             base.Clear();
             StartAngle = EndAngle = 0;
