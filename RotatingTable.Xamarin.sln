@@ -1,13 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31727.386
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RotatingTable.Xamarin.Android", "RotatingTable.Xamarin\RotatingTable.Xamarin.Android\RotatingTable.Xamarin.Android.csproj", "{77319C52-C936-46A6-8137-12776E272C19}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RotatingTable.Xamarin.iOS", "RotatingTable.Xamarin\RotatingTable.Xamarin.iOS\RotatingTable.Xamarin.iOS.csproj", "{AD89BE01-786B-4587-BD13-92EFEFB0203F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RotatingTable.Xamarin", "RotatingTable.Xamarin\RotatingTable.Xamarin\RotatingTable.Xamarin.csproj", "{741F86B3-5EE7-444E-AEF0-1FB86FA086AA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RotatingTable.Xamarin", "RotatingTable.Xamarin\RotatingTable.Xamarin\RotatingTable.Xamarin.csproj", "{741F86B3-5EE7-444E-AEF0-1FB86FA086AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "RotatingTable.Xamarin\Tests\Tests.csproj", "{A71A0701-FDD2-40A0-AECA-3891F953C2FF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,6 +75,18 @@ Global
 		{741F86B3-5EE7-444E-AEF0-1FB86FA086AA}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{741F86B3-5EE7-444E-AEF0-1FB86FA086AA}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 		{741F86B3-5EE7-444E-AEF0-1FB86FA086AA}.Release|iPhoneSimulator.Deploy.0 = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|iPhone.Build.0 = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{A71A0701-FDD2-40A0-AECA-3891F953C2FF}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

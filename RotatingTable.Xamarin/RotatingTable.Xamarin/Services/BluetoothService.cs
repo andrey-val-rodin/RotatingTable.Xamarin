@@ -5,7 +5,6 @@ using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
 using RotatingTable.Xamarin.Models;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -17,11 +16,13 @@ namespace RotatingTable.Xamarin.Services
     public class BluetoothService : IBluetoothService
     {
         private static readonly Guid ServiceUuid = new("e7810a71-73ae-499d-8c15-faa9aef0c3f2");
+        public const char Terminator = '\n';
 
         private readonly IUserDialogs _userDialogs;
         private string _response;
         private readonly object _responseLock = new();
         private EventHandler<CharacteristicUpdatedEventArgs> _listeningHandler;
+        private readonly ListeningStream _listeningStream = new ();
 
         public BluetoothService()
         {
@@ -93,7 +94,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 if (!token.IsCancellationRequested)
                     await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
@@ -111,7 +112,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 if (!token.IsCancellationRequested)
                     await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return false;
@@ -185,7 +186,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 return null;
             }
         }
@@ -199,13 +200,17 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 return null;
             }
         }
 
         private async Task<string> WriteWithResponseAsync(string text)
         {
+            System.Diagnostics.Debug.WriteLine("Write: " + text);
+
+            // Append terminator
+            text += Terminator;
             try
             {
                 _response = null;
@@ -230,7 +235,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 return null;
             }
             finally
@@ -249,15 +254,23 @@ namespace RotatingTable.Xamarin.Services
 
         private void OnCharacteristicValueUpdated(object sender, CharacteristicUpdatedEventArgs args)
         {
+            string response = null;
+            _listeningStream.Append(args.Characteristic.Value, (e, a) =>
+            {
+                if (response == null)
+                    response = a.Text;
+            });
+
             lock (_responseLock)
             {
-                _response = UnsafeAsciiBytesToString(args.Characteristic.Value);
-                Debug.WriteLine(_response);
+                _response = response;
             }
         }
 
         private async Task BeginListeningAsync(EventHandler<CharacteristicUpdatedEventArgs> handler)
         {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
             if (IsListening)
                 throw new InvalidOperationException("Listen already");
 
@@ -321,16 +334,19 @@ namespace RotatingTable.Xamarin.Services
                 return false;
 
             if (eventHandler != null)
-                await BeginListeningAsync(async (s, a) =>
-                  {
-                      var text = UnsafeAsciiBytesToString(a.Characteristic.Value);
-                      Debug.WriteLine(text);
-                      eventHandler.Invoke(this, new DeviceInputEventArgs(text));
-                      if (text == Commands.End)
-                          await EndListeningAsync();
-                    // TODO: what happens if input never get "END"? - add here timeout for input
-                    // Timer class?
+            {
+                await BeginListeningAsync((source, args) =>
+                {
+                    _listeningStream.Append(args.Characteristic.Value, async (e, a) =>
+                    {
+                        eventHandler.Invoke(this, new DeviceInputEventArgs(a.Text));
+                        if (a.Text == Commands.End)
+                            await EndListeningAsync();
+                        // TODO: what happens if input never get "END"? - add here timeout for input
+                        // Timer class?
+                    });
                 });
+            }
 
             return true;
         }
@@ -369,23 +385,6 @@ namespace RotatingTable.Xamarin.Services
 
             var command = Commands.SetExposure + ' ' + exposure.ToString();
             return await WriteWithResponseAsync(command) == Commands.OK;
-        }
-
-        private string UnsafeAsciiBytesToString(byte[] buffer)
-        {
-            int end = 0;
-            while (end < buffer.Length && buffer[end] != 0)
-            {
-                end++;
-            }
-
-            unsafe
-            {
-                fixed (byte* pAscii = buffer)
-                {
-                    return new string((sbyte*)pAscii, 0, end);
-                }
-            }
         }
     }
 }
