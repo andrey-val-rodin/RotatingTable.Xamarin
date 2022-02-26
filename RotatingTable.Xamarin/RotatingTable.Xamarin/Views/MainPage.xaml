@@ -11,7 +11,7 @@
     </ContentPage.BindingContext>
     <ContentPage.Content>
         <StackLayout>
-            <StackLayout Margin="12">
+            <StackLayout Margin="12" IsEnabled="{Binding IsConnected}">
                 <!-- Enclose SKCanvasView in single-cell Grid. 
                 Otherwise, iOS won't get the touch events. -->
                 <Grid Grid.Row="1"
@@ -35,49 +35,61 @@
                         IsVisible="{Binding IsReady}"
                         CornerRadius="8"
                         Command="{Binding RunCommand}"/>
-                <StackLayout Orientation="Horizontal">
-                    <Label Text="Количество шагов"/>
-                    <Label Text="{Binding Steps}"
+                
+                <StackLayout IsVisible="{Binding ShowSteps}">
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Количество шагов"/>
+                        <Label Text="{Binding Steps}"
                            HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray"
+                            MaximumTrackColor="Gray"
+                            ThumbColor="Blue"
+                            Maximum="21" Minimum="0"
+                            Value="{Binding StepsIndex}"
+                            DragCompletedCommand="{Binding ChangeStepsCommand}"/>
                 </StackLayout>
-                <Slider MinimumTrackColor="Gray"
-                        IsEnabled="{Binding IsReady}"
-                        MaximumTrackColor="Gray"
-                        ThumbColor="Blue"
-                        Maximum="21" Minimum="0"
-                        Value="{Binding StepsIndex}"
-                        DragCompletedCommand="{Binding ChangeStepsCommand}"/>
-                <StackLayout Orientation="Horizontal">
-                    <Label Text="Ускорение"/>
-                    <Label Text="{Binding AccelerationText}"
-                           HorizontalOptions="EndAndExpand"/>
+                
+                <StackLayout IsVisible="{Binding ShowAcceleration}">
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Ускорение"/>
+                        <Label Text="{Binding AccelerationText}"
+                               HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray"
+                            MaximumTrackColor="Gray"
+                            ThumbColor="Blue"
+                            Maximum="10" Minimum="1"
+                            Value="{Binding Acceleration}"
+                            DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
                 </StackLayout>
-                <Slider MinimumTrackColor="Gray"
-                        MaximumTrackColor="Gray"
-                        ThumbColor="Blue"
-                        Maximum="10" Minimum="1"
-                        Value="{Binding Acceleration}"
-                        DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
-                <StackLayout Orientation="Horizontal">
-                    <Label Text="Экспозиция"/>
-                    <Label Text="{Binding ExposureText}"
-                           HorizontalOptions="EndAndExpand"/>
+                
+                <StackLayout IsVisible="{Binding ShowExposure}">
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Экспозиция"/>
+                        <Label Text="{Binding ExposureText}"
+                               HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray"
+                            MaximumTrackColor="Gray"
+                            ThumbColor="Blue"
+                            Maximum="5" Minimum="1" Value="{Binding Exposure}"
+                            DragCompletedCommand="{Binding ChangeExposureCommand}"/>
                 </StackLayout>
-                <Slider MinimumTrackColor="Gray"
-                        MaximumTrackColor="Gray"
-                        ThumbColor="Blue"
-                        Maximum="5" Minimum="1" Value="{Binding Exposure}"
-                        DragCompletedCommand="{Binding ChangeExposureCommand}"/>
-                <StackLayout Orientation="Horizontal">
+                
+                <StackLayout IsVisible="{Binding ShowDelay}">
+                    <StackLayout Orientation="Horizontal">
                     <Label Text="Задержка"/>
                     <Label Text="{Binding DelayText}"
                            HorizontalOptions="EndAndExpand"/>
+                    </StackLayout>
+                    <Slider MinimumTrackColor="Gray"
+                            MaximumTrackColor="Gray"
+                            ThumbColor="Blue"
+                            Maximum="50" Minimum="0" Value="{Binding Delay}"
+                            DragCompletedCommand="{Binding ChangeDelayCommand}"/>
                 </StackLayout>
-                <Slider MinimumTrackColor="Gray"
-                        MaximumTrackColor="Gray"
-                        ThumbColor="Blue"
-                        Maximum="50" Minimum="0" Value="{Binding Delay}"
-                        DragCompletedCommand="{Binding ChangeDelayCommand}"/>
+                
                 <Button Text="Стоп"
                         IsVisible="{Binding IsRunning}"
                         CornerRadius="8"

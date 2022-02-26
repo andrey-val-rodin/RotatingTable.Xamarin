@@ -15,8 +15,8 @@ namespace RotatingTable.Xamarin.Services
 
         public void Append(byte[] bytes, EventHandler<DeviceInputEventArgs> eventHandler)
         {
-            System.Diagnostics.Debug.WriteLine("Stream: " +
-                UnsafeAsciiBytesToString(bytes).Replace(BluetoothService.Terminator, '|'));
+//            System.Diagnostics.Debug.WriteLine("Stream: " +
+//                UnsafeAsciiBytesToString(bytes).Replace(BluetoothService.Terminator, '|'));
 
             _internalStream.Write(bytes, 0, bytes.Length);
             Parse(eventHandler);
@@ -46,7 +46,7 @@ namespace RotatingTable.Xamarin.Services
                 {
                     // Convert token to string and invoke handler
                     var text = UnsafeAsciiBytesToString(_buffer, current);
-                    System.Diagnostics.Debug.WriteLine("Token: " + text);
+//                    System.Diagnostics.Debug.WriteLine("Token: " + text);
                     eventHandler?.Invoke(this, new DeviceInputEventArgs(text));
                     bytesToRemove += current + 1;
                     current = 0;

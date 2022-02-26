@@ -1,7 +1,6 @@
 ﻿using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -16,8 +15,9 @@ namespace RotatingTable.Xamarin.ViewModels
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
-        private int _currentMode;
+        private bool _isConnected;
         private bool _isRunning;
+        private int _currentMode;
         private int _currentStep;
         private int _currentPos;
         private int _stepsIndex;
@@ -46,10 +46,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 "Свободное перемещение"
             };
 
-        public int CurrentMode
+        public bool IsConnected
         {
-            get => _currentMode;
-            set => SetProperty(ref _currentMode, value);
+            get => _isConnected;
+            set => SetProperty(ref _isConnected, value);
         }
 
         public bool IsRunning
@@ -57,9 +57,26 @@ namespace RotatingTable.Xamarin.ViewModels
             get => _isRunning;
             set
             {
-                if (SetProperty(ref _isRunning, value))
+                if (SetProperty(ref _isRunning, value)) 
+                {
                     OnPropertyChanged("IsReady");
+                    OnPropertyChanged(nameof(ShowSteps));
+                    OnPropertyChanged(nameof(ShowAcceleration));
+                    OnPropertyChanged(nameof(ShowExposure));
+                    OnPropertyChanged(nameof(ShowDelay));
+                }
             }
+        }
+
+        public bool IsReady
+        {
+            get => !IsRunning;
+        }
+
+        public int CurrentMode
+        {
+            get => _currentMode;
+            set => SetProperty(ref _currentMode, value);
         }
 
         public int CurrentStep
@@ -84,18 +101,13 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        public bool IsReady
-        {
-            get => !IsRunning;
-        }
-
         public int StepsIndex
         {
             get => _stepsIndex;
             set
             {
                 if (SetProperty(ref _stepsIndex, value))
-                    OnPropertyChanged("Steps");
+                    OnPropertyChanged(nameof(Steps));
             }
         }
 
@@ -113,7 +125,7 @@ namespace RotatingTable.Xamarin.ViewModels
             set
             {
                 if (SetProperty(ref _acceleration, value))
-                    OnPropertyChanged("AccelerationText");
+                    OnPropertyChanged(nameof(AccelerationText));
             }
         }
 
@@ -128,7 +140,7 @@ namespace RotatingTable.Xamarin.ViewModels
             set
             {
                 if (SetProperty(ref _exposure, value))
-                    OnPropertyChanged("ExposureText");
+                    OnPropertyChanged(nameof(ExposureText));
             }
         }
 
@@ -143,13 +155,40 @@ namespace RotatingTable.Xamarin.ViewModels
             set
             {
                 if (SetProperty(ref _delay, value))
-                    OnPropertyChanged("DelayText");
+                    OnPropertyChanged(nameof(DelayText));
             }
         }
 
         public string DelayText
         {
             get => (Delay * 100).ToString();
+        }
+
+        public bool ShowSteps
+        {
+            get => !IsRunning ||
+                CurrentMode == (int)Mode.Auto ||
+                CurrentMode == (int)Mode.Manual ||
+                CurrentMode == (int)Mode.Nonstop;
+        }
+
+        public bool ShowAcceleration
+        {
+            get => !IsRunning ||
+                CurrentMode != (int)Mode.Video;
+        }
+
+        public bool ShowExposure
+        {
+            get => !IsRunning ||
+                CurrentMode == (int)Mode.Auto ||
+                CurrentMode == (int)Mode.Manual;
+        }
+
+        public bool ShowDelay
+        {
+            get => !IsRunning ||
+                CurrentMode == (int)Mode.Auto;
         }
 
         public Command RunCommand { get; }
@@ -162,9 +201,11 @@ namespace RotatingTable.Xamarin.ViewModels
         public async Task InitAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            if (service.IsConnected)
+            IsConnected = service.IsConnected;
+            if (IsConnected)
             {
+                var configService = DependencyService.Resolve<IConfigService>();
+
                 var steps = await configService.GetStepsAsync();
                 var acceleration = await configService.GetAccelerationAsync();
                 var delay = await configService.GetDelayAsync();
@@ -203,7 +244,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public void OnDataReseived(string text)
         {
-            Debug.WriteLine($"Received text: '{text}'");
+//            System.Diagnostics.Debug.WriteLine($"Received text: '{text}'");
             if (text.StartsWith(Commands.Step))
             {
                 CurrentStep = int.TryParse(text.Substring(Commands.Step.Length), out int i) ? i : 0;

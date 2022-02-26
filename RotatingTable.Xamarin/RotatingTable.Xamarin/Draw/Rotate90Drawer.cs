@@ -3,7 +3,6 @@ using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp;
 using SkiaSharp.Views.Forms;
 using System;
-using System.Diagnostics;
 
 namespace RotatingTable.Xamarin.Draw
 {
@@ -29,7 +28,7 @@ namespace RotatingTable.Xamarin.Draw
                 else
                     angle = _startQuadrant * 90 + 90 + _offset;
 
-                Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  StartAngle: {angle}");
+//                System.Diagnostics.Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  StartAngle: {angle}");
                 return angle;
             }
             set => throw new NotImplementedException();
@@ -48,7 +47,7 @@ namespace RotatingTable.Xamarin.Draw
                 else
                     angle = _startQuadrant == 0 && _endQuadrant == 3 ? - 90 : _endQuadrant * 90;
 
-                Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  EndAngle: {angle}");
+//                System.Diagnostics.Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  EndAngle: {angle}");
                 return angle;
             }
             set => throw new NotImplementedException();
