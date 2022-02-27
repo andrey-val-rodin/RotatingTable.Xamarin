@@ -83,6 +83,9 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private void AddOrUpdateDevice(IDevice device)
         {
+            if (string.IsNullOrEmpty(device?.Name))
+                return;
+
             var item = Devices.FirstOrDefault(d => d.Device.Id == device.Id);
             if (item != null)
                 item.Update(device);

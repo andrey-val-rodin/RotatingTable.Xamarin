@@ -1,5 +1,6 @@
 ﻿using RotatingTable.Xamarin.Services;
 using RotatingTable.Xamarin.ViewModels;
+using System.Linq;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
@@ -35,8 +36,16 @@ namespace RotatingTable.Xamarin.Views
             {
                 var configService = DependencyService.Resolve<IConfigService>();
                 await configService.SetDeviceIdAsync(item.Device.Id);
+                var mainModel = GetMainModel();
+                await mainModel?.InitAsync();
                 await Shell.Current.GoToAsync("//MainPage");
             }
+        }
+
+        private MainModel GetMainModel()
+        {
+            var mainPage = (MainPage)(Shell.Current?.Items[0]?.CurrentItem as IShellSectionController)?.PresentedPage;
+            return mainPage?.Model;
         }
     }
 }

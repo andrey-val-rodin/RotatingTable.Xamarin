@@ -5,6 +5,7 @@ using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
 using RotatingTable.Xamarin.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -22,7 +23,8 @@ namespace RotatingTable.Xamarin.Services
         private string _response;
         private readonly object _responseLock = new();
         private EventHandler<CharacteristicUpdatedEventArgs> _listeningHandler;
-        private ListeningStream _listeningStream;
+        private readonly ListeningStream _listeningStream = new();
+        private readonly List<string> _acceptedTokens = new();
 
         public BluetoothService()
         {
@@ -33,9 +35,8 @@ namespace RotatingTable.Xamarin.Services
         private ICharacteristic Characteristic { get; set; }
 
         public bool IsConnected { get; private set; }
-        public bool IsListening { get; private set; }
 
-        public async Task<bool> ConnectAsync(Guid id)
+        public async Task<bool> ConnectAsync<T>(T deviceOrId)
         {
             CancellationTokenSource tokenSource = new();
             string error = null;
@@ -43,43 +44,74 @@ namespace RotatingTable.Xamarin.Services
             {
                 using (var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource)))
                 {
-                    IDevice device = await ConnectToDeviceAsync(id, tokenSource.Token);
+                    IDevice device = deviceOrId is IDevice
+                        ? await ConnectToDeviceAsync((IDevice)deviceOrId, tokenSource.Token)
+                        : await ConnectToDeviceAsync((Guid)(object)deviceOrId, tokenSource.Token);
                     if (device == null)
                         return false;
 
-                    error = await DoConnectSteps(device, tokenSource.Token);
-                    return IsConnected;
-                }
-            }
-            finally
-            {
-                tokenSource.Dispose();
-                if (!string.IsNullOrEmpty(error))
-                    await _userDialogs.AlertAsync(error);
-            }
-        }
-
-        public async Task<bool> ConnectAsync(IDevice device)
-        {
-            Monitor.Enter(this);
-            CancellationTokenSource tokenSource = new();
-            string error = null;
-            try
-            {
-                using (var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource)))
-                {
-                    if (!await ConnectToDeviceAsync(device, tokenSource.Token))
+                    // Get service
+                    var service = await LoadService(device, tokenSource.Token);
+                    if (service == null)
+                    {
+                        error = $"Сервис {ServiceUuid} не найден";
                         return false;
+                    }
 
-                    error = await DoConnectSteps(device, tokenSource.Token);
+                    // Get characteristic
+                    Characteristic = await LoadCharacteristics(service, tokenSource.Token);
+                    if (Characteristic == null)
+                    {
+                        error = "Характеристика не обнаружена";
+                        return false;
+                    }
+
+                    // Start listening
+                    IsConnected = true;
+                    Characteristic.ValueUpdated += OnCharacteristicValueUpdated;
+                    await Characteristic.StartUpdatesAsync();
+
+                    error = await CheckStatus();
+                    if (!string.IsNullOrEmpty(error))
+                    {
+                        IsConnected = false;
+                        return false;
+                    }
+
+                    // Save config
+                    var configService = DependencyService.Resolve<IConfigService>();
+                    if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
+                        !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
+                        !await SetDelayAsync(await configService.GetDelayAsync()) ||
+                        !await SetExposureAsync(await configService.GetExposureAsync()))
+                    {
+                        IsConnected = false;
+                        error = "Не удалось передать столу параметры";
+                        return false;
+                    }
+
                     return IsConnected;
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                if (!tokenSource.Token.IsCancellationRequested)
+                    await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+                IsConnected = false;
+                return false;
             }
             finally
             {
                 tokenSource.Dispose();
-                if (!string.IsNullOrEmpty(error))
-                    await _userDialogs.AlertAsync(error);
+                if (!IsConnected)
+                {
+                    if (!string.IsNullOrEmpty(error))
+                        await _userDialogs.AlertAsync(error);
+
+                    Characteristic.ValueUpdated -= OnCharacteristicValueUpdated;
+                    await Characteristic.StopUpdatesAsync();
+                }
             }
         }
 
@@ -101,51 +133,22 @@ namespace RotatingTable.Xamarin.Services
             }
         }
 
-        private async Task<bool> ConnectToDeviceAsync(IDevice device, CancellationToken token)
+        private async Task<IDevice> ConnectToDeviceAsync(IDevice device, CancellationToken token)
         {
             try
             {
                 await Adapter.ConnectToDeviceAsync(device,
                     new ConnectParameters(false, forceBleTransport: true), token);
 
-                return true;
+                return device;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
                 if (!token.IsCancellationRequested)
                     await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
-                return false;
+                return null;
             }
-        }
-
-        private async Task<string> DoConnectSteps(IDevice device, CancellationToken token)
-        {
-            var service = await LoadService(device, token);
-            if (service == null)
-                return $"Сервис {ServiceUuid} не найден";
-
-            Characteristic = await LoadCharacteristics(service, token);
-            if (Characteristic == null)
-                return "Характеристика не обнаружена";
-
-            IsConnected = true;
-            var response = await CheckStatus();
-            if (!string.IsNullOrEmpty(response))
-                return response;
-
-            // Save config
-            var configService = DependencyService.Resolve<IConfigService>();
-            if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
-                !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
-                !await SetDelayAsync(await configService.GetDelayAsync()) ||
-                !await SetExposureAsync(await configService.GetExposureAsync()))
-            {
-                IsConnected = false;
-                return "Не удалось передать столу параметры";
-            }
-
-            return null;
         }
 
         private ProgressDialogConfig CreateDialogConfig(CancellationTokenSource tokenSource)
@@ -190,7 +193,7 @@ namespace RotatingTable.Xamarin.Services
         private async Task<string> CheckStatus()
         {
             var response = await GetStatusAsync();
-            if (response == "RUNNING")
+            if (response == Commands.Running)
             {
                 // Ask the user if app should stop table
                 var result = await _userDialogs.PromptAsync(new PromptConfig
@@ -216,7 +219,7 @@ namespace RotatingTable.Xamarin.Services
                     return null;
                 }
             }
-            else if (response == "BUSY")
+            else if (response == Commands.Busy)
             {
                 // Try to stop and then ask table for status again
                 if (!await StopAsync())
@@ -228,7 +231,7 @@ namespace RotatingTable.Xamarin.Services
                 response = await GetStatusAsync();
             }
 
-            if (response != Commands.StatusReady)
+            if (response != Commands.Ready)
             {
                 IsConnected = false;
                 return string.IsNullOrEmpty(response)
@@ -239,16 +242,16 @@ namespace RotatingTable.Xamarin.Services
             return null;
         }
 
-        private async Task<string> WriteWithResponseAsync(string text)
+        private async Task<string> WriteWithResponseAsync(string text, string[] acceptedTokens)
         {
-            System.Diagnostics.Debug.WriteLine("Write: " + text);
+            _acceptedTokens.Clear();
+            _acceptedTokens.AddRange(acceptedTokens);
 
             // Append terminator
             text += Terminator;
             try
             {
                 _response = null;
-                await BeginListeningAsync(OnCharacteristicValueUpdated);
                 await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text));
                 var token = new CancellationTokenSource(500).Token;
                 string response = null;
@@ -270,11 +273,8 @@ namespace RotatingTable.Xamarin.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
+                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
-            }
-            finally
-            {
-                await EndListeningAsync();
             }
         }
 
@@ -291,36 +291,33 @@ namespace RotatingTable.Xamarin.Services
             string response = null;
             _listeningStream.Append(args.Characteristic.Value, (e, a) =>
             {
-                if (response == null)
+                // Ignore all tokens except accepted ones
+                var token = a.Text;
+                if (_acceptedTokens.Contains(token))
                     response = a.Text;
             });
 
-            lock (_responseLock)
+            if (!string.IsNullOrEmpty(response))
             {
-                _response = response;
+                lock (_responseLock)
+                {
+                    _response = response;
+                }
             }
         }
 
-        private async Task BeginListeningAsync(EventHandler<CharacteristicUpdatedEventArgs> handler)
+        private void BeginListening(EventHandler<CharacteristicUpdatedEventArgs> handler)
         {
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
-            if (IsListening)
-                throw new InvalidOperationException("Listen already");
 
-            _listeningStream = new();
             _listeningHandler = handler;
             Characteristic.ValueUpdated += _listeningHandler;
-            IsListening = true;
-            await Characteristic.StartUpdatesAsync();
         }
 
-        private async Task EndListeningAsync()
+        private void EndListening()
         {
-            await Characteristic.StopUpdatesAsync();
             Characteristic.ValueUpdated -= _listeningHandler;
-            _listeningStream = null;
-            IsListening = false;
         }
 
         public async Task<string> GetStatusAsync()
@@ -328,7 +325,8 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteWithResponseAsync(Commands.Status);
+            return await WriteWithResponseAsync(Commands.Status,
+                new[] { Commands.Running, Commands.Busy, Commands.Ready });
         }
 
         public async Task<bool> RunAutoModeAsync(EventHandler<DeviceInputEventArgs> eventHandler)
@@ -355,32 +353,22 @@ namespace RotatingTable.Xamarin.Services
             return await RunAsync(Commands.FreeMovement + angle, eventHandler);
         }
 
-        public async Task<bool> StopAsync()
-        {
-            if (!IsConnected)
-                throw new InvalidOperationException("Not connected");
-
-            if (IsListening)
-                await EndListeningAsync();
-
-            return await WriteWithResponseAsync(Commands.Stop) == Commands.OK;
-        }
-
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
         {
-            var response = await WriteWithResponseAsync(command);
+            var response = await WriteWithResponseAsync(command,
+                new[] { Commands.OK, Commands.Error });
             if (response != Commands.OK)
                 return false;
 
             if (eventHandler != null)
             {
-                await BeginListeningAsync((source, args) =>
+                BeginListening((source, args) =>
                 {
-                    _listeningStream.Append(args.Characteristic.Value, async (e, a) =>
+                    _listeningStream.Append(args.Characteristic.Value, (e, a) =>
                     {
                         eventHandler.Invoke(this, new DeviceInputEventArgs(a.Text));
                         if (a.Text == Commands.End)
-                            await EndListeningAsync();
+                            EndListening();
                         // TODO: what happens if input never get "END"? - add here timeout for input
                         // Timer class?
                     });
@@ -390,13 +378,25 @@ namespace RotatingTable.Xamarin.Services
             return true;
         }
 
+        public async Task<bool> StopAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            EndListening();
+
+            return await WriteWithResponseAsync(Commands.Stop,
+                new[] { Commands.OK }) == Commands.OK;
+        }
+
         public async Task<bool> SetStepsAsync(int steps)
         {
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetSteps + ' ' + steps.ToString();
-            return await WriteWithResponseAsync(command) == Commands.OK;
+            return await WriteWithResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
         public async Task<bool> SetAccelerationAsync(int acceleration)
@@ -405,7 +405,8 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetAcceleration + ' ' + acceleration.ToString();
-            return await WriteWithResponseAsync(command) == Commands.OK;
+            return await WriteWithResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
         public async Task<bool> SetDelayAsync(int delay)
@@ -414,7 +415,8 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetDelay + ' ' + delay.ToString();
-            return await WriteWithResponseAsync(command) == Commands.OK;
+            return await WriteWithResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
         public async Task<bool> SetExposureAsync(int exposure)
@@ -423,7 +425,8 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetExposure + ' ' + exposure.ToString();
-            return await WriteWithResponseAsync(command) == Commands.OK;
+            return await WriteWithResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
     }
 }
