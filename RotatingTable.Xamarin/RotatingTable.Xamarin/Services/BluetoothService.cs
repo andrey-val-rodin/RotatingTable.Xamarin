@@ -21,10 +21,11 @@ namespace RotatingTable.Xamarin.Services
 
         private readonly IUserDialogs _userDialogs;
         private string _response;
-        private readonly object _responseLock = new();
-        private EventHandler<CharacteristicUpdatedEventArgs> _listeningHandler;
-        private readonly ListeningStream _listeningStream = new();
+        private readonly ListeningStream _stream = new();
+        private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
         private readonly List<string> _acceptedTokens = new();
+        private bool _isListening;
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         public BluetoothService()
         {
@@ -35,6 +36,7 @@ namespace RotatingTable.Xamarin.Services
         private ICharacteristic Characteristic { get; set; }
 
         public bool IsConnected { get; private set; }
+        public bool IsRunning { get; private set; }
 
         public async Task<bool> ConnectAsync<T>(T deviceOrId)
         {
@@ -68,8 +70,8 @@ namespace RotatingTable.Xamarin.Services
 
                     // Start listening
                     IsConnected = true;
-                    Characteristic.ValueUpdated += OnCharacteristicValueUpdated;
                     await Characteristic.StartUpdatesAsync();
+                    Characteristic.ValueUpdated += CharacteristicListeningHandler;
 
                     error = await CheckStatus();
                     if (!string.IsNullOrEmpty(error))
@@ -109,10 +111,32 @@ namespace RotatingTable.Xamarin.Services
                     if (!string.IsNullOrEmpty(error))
                         await _userDialogs.AlertAsync(error);
 
-                    Characteristic.ValueUpdated -= OnCharacteristicValueUpdated;
-                    await Characteristic.StopUpdatesAsync();
+                    if (Characteristic != null)
+                    {
+                        await Characteristic.StopUpdatesAsync();
+                        Characteristic = null;
+                    }
                 }
             }
+        }
+
+        public async Task DisconnectAsync()
+        {
+            if (IsRunning)
+                throw new InvalidOperationException("Unable to disconnect while running");
+
+            if (Characteristic != null)
+            {
+                await Characteristic.StopUpdatesAsync();
+                Characteristic = null;
+            }
+
+            IsConnected = false;
+        }
+
+        private void CharacteristicListeningHandler(object sender, CharacteristicUpdatedEventArgs args)
+        {
+            _stream.Append(args.Characteristic.Value);
         }
 
         private async Task<IDevice> ConnectToDeviceAsync(Guid id, CancellationToken token)
@@ -244,22 +268,31 @@ namespace RotatingTable.Xamarin.Services
 
         private async Task<string> WriteWithResponseAsync(string text, string[] acceptedTokens)
         {
+            System.Diagnostics.Debug.WriteLine($"Command: {text}");
+
+            await _semaphore.WaitAsync();
+
             _acceptedTokens.Clear();
             _acceptedTokens.AddRange(acceptedTokens);
 
             // Append terminator
             text += Terminator;
+            
             try
             {
+                _stream.TokenUpdated += CommandHandler;
                 _response = null;
-                await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text));
+
+                if (!await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text)))
+                    return null;
+
                 var token = new CancellationTokenSource(500).Token;
                 string response = null;
                 await Task.Run(() =>
                 {
                     while (true)
                     {
-                        response = GetResponse();
+                        response = _response;
                         if (!string.IsNullOrEmpty(response) || token.IsCancellationRequested)
                             return;
                     }
@@ -276,48 +309,42 @@ namespace RotatingTable.Xamarin.Services
                 await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
             }
-        }
-
-        private string GetResponse()
-        {
-            lock (_responseLock)
+            finally
             {
-                return _response;
+                _semaphore.Release();
+                _stream.TokenUpdated -= CommandHandler;
             }
         }
 
-        private void OnCharacteristicValueUpdated(object sender, CharacteristicUpdatedEventArgs args)
+        private void CommandHandler(object sender, DeviceInputEventArgs args)
         {
-            string response = null;
-            _listeningStream.Append(args.Characteristic.Value, (e, a) =>
-            {
-                // Ignore all tokens except accepted ones
-                var token = a.Text;
-                if (_acceptedTokens.Contains(token))
-                    response = a.Text;
-            });
+            var token = args.Text;
 
-            if (!string.IsNullOrEmpty(response))
-            {
-                lock (_responseLock)
-                {
-                    _response = response;
-                }
-            }
+            // Take only first eccepted token
+            if (string.IsNullOrEmpty(_response) && _acceptedTokens.Contains(token))
+                _response = args.Text;
         }
 
-        private void BeginListening(EventHandler<CharacteristicUpdatedEventArgs> handler)
+        private void BeginListening(EventHandler<DeviceInputEventArgs> handler)
         {
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
+            if (_isListening)
+                throw new InvalidOperationException("Listen already");
 
-            _listeningHandler = handler;
-            Characteristic.ValueUpdated += _listeningHandler;
+            _streamTokenHandler = handler;
+            _isListening = true;
+            _stream.TokenUpdated += RunningHandler;
         }
 
         private void EndListening()
         {
-            Characteristic.ValueUpdated -= _listeningHandler;
+            if (!_isListening)
+                throw new InvalidOperationException("BeginListening was not called");
+
+            _stream.TokenUpdated -= RunningHandler;
+            _isListening = false;
+            _streamTokenHandler = null;
         }
 
         public async Task<string> GetStatusAsync()
@@ -355,27 +382,44 @@ namespace RotatingTable.Xamarin.Services
 
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
         {
-            var response = await WriteWithResponseAsync(command,
-                new[] { Commands.OK, Commands.Error });
-            if (response != Commands.OK)
-                return false;
+            if (IsRunning)
+                throw new InvalidOperationException("Running already");
 
-            if (eventHandler != null)
+            IsRunning = true;
+            var success = false;
+            try
             {
-                BeginListening((source, args) =>
+                if (eventHandler != null)
                 {
-                    _listeningStream.Append(args.Characteristic.Value, (e, a) =>
-                    {
-                        eventHandler.Invoke(this, new DeviceInputEventArgs(a.Text));
-                        if (a.Text == Commands.End)
-                            EndListening();
-                        // TODO: what happens if input never get "END"? - add here timeout for input
-                        // Timer class?
-                    });
-                });
+                    BeginListening(eventHandler);
+                }
+
+                success = await WriteWithResponseAsync(command,
+                    new[] { Commands.OK, Commands.Error }) == Commands.OK;
+            }
+            finally
+            {
+                if (!success)
+                {
+                    IsRunning = false;
+                    EndListening();
+                }
             }
 
-            return true;
+            return success;
+        }
+
+        private void RunningHandler(object sender, DeviceInputEventArgs args)
+        {
+            _streamTokenHandler?.Invoke(this, args);
+            if (args.Text == Commands.End)
+            {
+                // Finishing
+                IsRunning = false;
+                EndListening();
+            }
+            // TODO: what happens if input never get "END"? - add here timeout for input
+            // Timer class?
         }
 
         public async Task<bool> StopAsync()
@@ -383,10 +427,12 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            EndListening();
+            var result = await WriteWithResponseAsync(Commands.Stop,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
+            if (_isListening)
+                EndListening();
 
-            return await WriteWithResponseAsync(Commands.Stop,
-                new[] { Commands.OK }) == Commands.OK;
+            return result;
         }
 
         public async Task<bool> SetStepsAsync(int steps)

@@ -15,7 +15,12 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawSector(90, 360 * Model.CurrentStep / Model.Steps);
+            if (Model.CurrentStep > 0)
+            {
+                var angle = 360 / Model.Steps;
+                var anchor = angle * Model.CurrentStep;
+                DrawSector(anchor + Model.CurrentPos, angle - Model.CurrentPos);
+            }
             DrawBorder();
             DrawText(0, 40, Model.CurrentStep.ToString(), 100, SKTextAlign.Center);
         }

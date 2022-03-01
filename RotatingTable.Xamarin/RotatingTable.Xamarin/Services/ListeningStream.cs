@@ -5,6 +5,8 @@ namespace RotatingTable.Xamarin.Services
 {
     public class ListeningStream
     {
+        public event EventHandler<DeviceInputEventArgs> TokenUpdated;
+
         private MemoryStream _internalStream = new();
         private byte[] _buffer = new byte[1024];
 
@@ -15,14 +17,31 @@ namespace RotatingTable.Xamarin.Services
 
         public void Append(byte[] bytes, EventHandler<DeviceInputEventArgs> eventHandler)
         {
-//            System.Diagnostics.Debug.WriteLine("Stream: " +
-//                UnsafeAsciiBytesToString(bytes).Replace(BluetoothService.Terminator, '|'));
-
-            _internalStream.Write(bytes, 0, bytes.Length);
-            Parse(eventHandler);
+            try
+            {
+                TokenUpdated += eventHandler;
+                Append(bytes);
+            }
+            finally
+            {
+                TokenUpdated -= eventHandler;
+            }
         }
 
-        private void Parse(EventHandler<DeviceInputEventArgs> eventHandler)
+        public void Append(byte[] bytes)
+        {
+            System.Diagnostics.Debug.WriteLine("Stream: " +
+                UnsafeAsciiBytesToString(bytes).Replace(BluetoothService.Terminator, '|'));
+
+            lock(_internalStream)
+            {
+
+                _internalStream.Write(bytes, 0, bytes.Length);
+                Parse();
+            }
+        }
+
+        private void Parse()
         {
             _internalStream.Position = 0;
             int current = 0;
@@ -46,8 +65,8 @@ namespace RotatingTable.Xamarin.Services
                 {
                     // Convert token to string and invoke handler
                     var text = UnsafeAsciiBytesToString(_buffer, current);
-//                    System.Diagnostics.Debug.WriteLine("Token: " + text);
-                    eventHandler?.Invoke(this, new DeviceInputEventArgs(text));
+                    System.Diagnostics.Debug.WriteLine("Token: " + text);
+                    TokenUpdated?.Invoke(this, new DeviceInputEventArgs(text));
                     bytesToRemove += current + 1;
                     current = 0;
                     continue;

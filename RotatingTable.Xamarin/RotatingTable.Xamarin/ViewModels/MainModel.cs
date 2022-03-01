@@ -17,6 +17,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private bool _isConnected;
         private bool _isRunning;
+        private bool _isBusy;
         private int _currentMode;
         private int _currentStep;
         private int _currentPos;
@@ -201,44 +202,53 @@ namespace RotatingTable.Xamarin.ViewModels
         public async Task InitAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
+            var configService = DependencyService.Resolve<IConfigService>();
+
             IsConnected = service.IsConnected;
-            if (IsConnected)
-            {
-                var configService = DependencyService.Resolve<IConfigService>();
 
-                var steps = await configService.GetStepsAsync();
-                var acceleration = await configService.GetAccelerationAsync();
-                var delay = await configService.GetDelayAsync();
-                var exposure = await configService.GetExposureAsync();
+            var steps = await configService.GetStepsAsync();
+            var acceleration = await configService.GetAccelerationAsync();
+            var delay = await configService.GetDelayAsync();
+            var exposure = await configService.GetExposureAsync();
 
-                StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == steps);
-                Acceleration = acceleration;
-                Exposure = exposure / 100;
-                Delay = delay / 100;
-            }
+            StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == steps);
+            Acceleration = acceleration;
+            Exposure = exposure / 100;
+            Delay = delay / 100;
         }
 
         private async Task RunAsync()
         {
             var service = DependencyService.Resolve<IBluetoothService>();
-            switch (CurrentMode)
+            if (_isBusy || service.IsRunning)
+                return;
+
+            _isBusy = true;
+            try
             {
-                case (int)Mode.Auto:
-                    IsRunning = await service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
-                    break;
+                switch (CurrentMode)
+                {
+                    case (int)Mode.Auto:
+                        IsRunning = await service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
+                        break;
 
-                case (int)Mode.Rotate90:
-                case (int)Mode.FreeMovement:
-                    IsRunning = await service.RunFreeMovementAsync();
-                    break;
+                    case (int)Mode.Rotate90:
+                    case (int)Mode.FreeMovement:
+                        IsRunning = await service.RunFreeMovementAsync();
+                        break;
 
-                case (int)Mode.Manual:
-                case (int)Mode.Nonstop:
-                case (int)Mode.Video:
-                default:
-                    await Application.Current.MainPage.DisplayAlert("",
-                        "Не поддерживается пока", "OK");
-                    break;
+                    case (int)Mode.Manual:
+                    case (int)Mode.Nonstop:
+                    case (int)Mode.Video:
+                    default:
+                        await Application.Current.MainPage.DisplayAlert("",
+                            "Не поддерживается пока", "OK");
+                        break;
+                }
+            }
+            finally
+            {
+                _isBusy = false;
             }
         }
 
@@ -264,16 +274,27 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task StopAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            CurrentStep = 0;
-            CurrentPos = 0;
-            if (await service.StopAsync())
-                IsRunning = false;
-            else
+            if (_isBusy)
+                return;
+
+            _isBusy = true;
+            try
             {
-                //TODO what to do here?
+                var service = DependencyService.Resolve<IBluetoothService>();
+                CurrentStep = 0;
+                CurrentPos = 0;
+                if (await service.StopAsync())
+                    IsRunning = false;
+                else
+                {
+                    //TODO what to do here?
+                }
+                Stop?.Invoke(this, EventArgs.Empty);
             }
-            Stop?.Invoke(this, EventArgs.Empty);
+            finally
+            {
+                _isBusy = false;
+            }
         }
 
         private async Task ChangeStepsAsync()
@@ -282,26 +303,34 @@ namespace RotatingTable.Xamarin.ViewModels
             var configService = DependencyService.Resolve<IConfigService>();
             var oldSteps = await configService.GetStepsAsync();
             var newSteps = StepValues[StepsIndex];
-
             if (newSteps == oldSteps)
                 return;
 
-            if (!ConfigValidator.IsStepsValid(Steps))
+            if (_isBusy)
             {
-                // Back to old value
-                StepsIndex = Array.FindIndex(StepValues, e => e == oldSteps);
+                await InitAsync(); // back to old value (restore defaults)
                 return;
             }
 
-            if (await service.SetStepsAsync(newSteps))
+            _isBusy = true;
+            bool success = false;
+            try
             {
-                // Store in persistent memory
-                await configService.SetStepsAsync(newSteps);
+                if (!ConfigValidator.IsStepsValid(Steps))
+                    return;
+
+                if (await service.SetStepsAsync(newSteps))
+                {
+                    // Store in persistent memory
+                    await configService.SetStepsAsync(newSteps);
+                    success = true;
+                }
             }
-            else
+            finally
             {
-                // Back to old value
-                StepsIndex = Array.FindIndex(StepValues, e => e == oldSteps);
+                _isBusy = false;
+                if (!success)
+                    await InitAsync(); // back to old value (restore defaults)
             }
         }
 
@@ -311,26 +340,34 @@ namespace RotatingTable.Xamarin.ViewModels
             var configService = DependencyService.Resolve<IConfigService>();
             var oldAcceleration = await configService.GetAccelerationAsync();
             var newAcceleration = Acceleration;
-
             if (newAcceleration == oldAcceleration)
                 return;
 
-            if (!ConfigValidator.IsAccelerationValid(newAcceleration))
+            if (_isBusy)
             {
-                // Back to old value
-                Acceleration = oldAcceleration;
+                await InitAsync(); // back to old value (restore defaults)
                 return;
             }
 
-            if (await service.SetAccelerationAsync(newAcceleration))
+            _isBusy = true;
+            bool success = false;
+            try
             {
-                // Store in persistent memory
-                await configService.SetAccelerationAsync(newAcceleration);
+                if (!ConfigValidator.IsAccelerationValid(newAcceleration))
+                    return;
+
+                if (await service.SetAccelerationAsync(newAcceleration))
+                {
+                    // Store in persistent memory
+                    await configService.SetAccelerationAsync(newAcceleration);
+                    success = true;
+                }
             }
-            else
+            finally
             {
-                // Back to old value
-                Acceleration = oldAcceleration;
+                _isBusy = false;
+                if (!success)
+                    await InitAsync(); // back to old value (restore defaults)
             }
         }
 
@@ -340,26 +377,34 @@ namespace RotatingTable.Xamarin.ViewModels
             var configService = DependencyService.Resolve<IConfigService>();
             var oldExposure = await configService.GetExposureAsync();
             var newExposure = Exposure * 100;
-            
             if (newExposure == oldExposure)
                 return;
 
-            if (!ConfigValidator.IsExposureValid(newExposure))
+            if (_isBusy)
             {
-                // Back to old value
-                Exposure = oldExposure / 100;
+                await InitAsync(); // back to old value (restore defaults)
                 return;
             }
 
-            if (await service.SetExposureAsync(newExposure))
+            _isBusy = true;
+            bool success = false;
+            try
             {
-                // Store in persistent memory
-                await configService.SetExposureAsync(newExposure);
+                if (!ConfigValidator.IsExposureValid(newExposure))
+                    return;
+
+                if (await service.SetExposureAsync(newExposure))
+                {
+                    // Store in persistent memory
+                    await configService.SetExposureAsync(newExposure);
+                    success = true;
+                }
             }
-            else
+            finally
             {
-                // Back to old value
-                Exposure = oldExposure / 100;
+                _isBusy = false;
+                if (!success)
+                    await InitAsync(); // back to old value (restore defaults)
             }
         }
 
@@ -369,26 +414,34 @@ namespace RotatingTable.Xamarin.ViewModels
             var configService = DependencyService.Resolve<IConfigService>();
             var oldDelay = await configService.GetDelayAsync();
             var newDelay = Delay * 100;
-
             if (newDelay == oldDelay)
                 return;
 
-            if (!ConfigValidator.IsDelayValid(newDelay))
+            if (_isBusy)
             {
-                // Back to old value
-                Delay = oldDelay / 100;
+                await InitAsync(); // back to old value (restore defaults)
                 return;
             }
 
-            if (await service.SetDelayAsync(newDelay))
+            _isBusy = true;
+            bool success = false;
+            try
             {
-                // Store in persistent memory
-                await configService.SetDelayAsync(newDelay);
+                if (!ConfigValidator.IsDelayValid(newDelay))
+                    return;
+
+                if (await service.SetDelayAsync(newDelay))
+                {
+                    // Store in persistent memory
+                    await configService.SetDelayAsync(newDelay);
+                    success = true;
+                }
             }
-            else
+            finally
             {
-                // Back to old value
-                Delay = oldDelay / 100;
+                _isBusy = false;
+                if (!success)
+                    await InitAsync(); // back to old value (restore defaults)
             }
         }
     }

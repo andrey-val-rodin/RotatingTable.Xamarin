@@ -1,4 +1,5 @@
 using RotatingTable.Xamarin.Services;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
@@ -67,6 +68,39 @@ namespace Tests
         }
 
         [Fact]
+        public void Append_LongDisruptedChain_ValidTokens()
+        {
+            var builder = new StringBuilder();
+            for (int i = 0; i < 1000; i++)
+            {
+                builder.Append($"Token {i}{N}");
+            }
+
+            var tokens = new List<string>();
+            string str = builder.ToString();
+            int current = 0;
+            var stream = new ListeningStream();
+            stream.TokenUpdated += (a, e) =>
+            {
+                tokens.Add(e.Text);
+            };
+
+            while (current < str.Length)
+            {
+                var count = Math.Min(10, str.Length - current - 1);
+                var substring = str.Substring(current, count);
+                stream.Append(Bytes(substring));
+                current += 10;
+            }
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                Assert.Equal($"Token {i}", tokens[i]);
+            }
+            Assert.Equal(0, _stream.Length);
+        }
+
+        [Fact]
         public void Append_BigSequence_ValidTokens()
         {
             int current = 1;
@@ -78,6 +112,8 @@ namespace Tests
                     Assert.Equal(token, e.Text);
                 });
             }
+
+            Assert.Equal(0, _stream.Length);
         }
 
         private byte[] Bytes(string text)
