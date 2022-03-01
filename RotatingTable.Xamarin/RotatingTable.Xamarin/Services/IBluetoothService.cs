@@ -1,11 +1,13 @@
-﻿using Plugin.BLE.Abstractions.Contracts;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace RotatingTable.Xamarin.Services
 {
     public interface IBluetoothService
     {
+        event ElapsedEventHandler Timeout;
+
         bool IsConnected { get; }
         bool IsRunning { get; }
 

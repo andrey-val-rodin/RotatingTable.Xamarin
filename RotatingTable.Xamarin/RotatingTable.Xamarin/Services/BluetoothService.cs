@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.Services
@@ -24,12 +25,24 @@ namespace RotatingTable.Xamarin.Services
         private readonly ListeningStream _stream = new();
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
         private readonly List<string> _acceptedTokens = new();
-        private bool _isListening;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly System.Timers.Timer _timer;
 
-        public BluetoothService()
+        public BluetoothService(IUserDialogs userDialogs)
         {
-            _userDialogs = UserDialogs.Instance;
+            _userDialogs = userDialogs;
+            _timer = new System.Timers.Timer(3000);
+            _timer.AutoReset = false;
+            Timeout += (s, e) =>
+            {
+                _userDialogs.Alert("В процессе работы превышено время ожидания ответа от стола");
+            };
+        }
+
+        public event ElapsedEventHandler Timeout
+        {
+            add => _timer.Elapsed += value;
+            remove => _timer.Elapsed -= value;
         }
 
         private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
@@ -266,7 +279,7 @@ namespace RotatingTable.Xamarin.Services
             return null;
         }
 
-        private async Task<string> WriteWithResponseAsync(string text, string[] acceptedTokens)
+        private async Task<string> WriteCommandAsync(string text, string[] acceptedTokens)
         {
             System.Diagnostics.Debug.WriteLine($"Command: {text}");
 
@@ -329,22 +342,17 @@ namespace RotatingTable.Xamarin.Services
         {
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
-            if (_isListening)
-                throw new InvalidOperationException("Listen already");
 
             _streamTokenHandler = handler;
-            _isListening = true;
             _stream.TokenUpdated += RunningHandler;
+            _timer.Start();
         }
 
         private void EndListening()
         {
-            if (!_isListening)
-                throw new InvalidOperationException("BeginListening was not called");
-
             _stream.TokenUpdated -= RunningHandler;
-            _isListening = false;
             _streamTokenHandler = null;
+            _timer.Stop();
         }
 
         public async Task<string> GetStatusAsync()
@@ -352,7 +360,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteWithResponseAsync(Commands.Status,
+            return await WriteCommandAsync(Commands.Status,
                 new[] { Commands.Running, Commands.Busy, Commands.Ready });
         }
 
@@ -385,16 +393,16 @@ namespace RotatingTable.Xamarin.Services
             if (IsRunning)
                 throw new InvalidOperationException("Running already");
 
-            IsRunning = true;
             var success = false;
             try
             {
                 if (eventHandler != null)
                 {
+                    IsRunning = true;
                     BeginListening(eventHandler);
                 }
 
-                success = await WriteWithResponseAsync(command,
+                success = await WriteCommandAsync(command,
                     new[] { Commands.OK, Commands.Error }) == Commands.OK;
             }
             finally
@@ -411,6 +419,10 @@ namespace RotatingTable.Xamarin.Services
 
         private void RunningHandler(object sender, DeviceInputEventArgs args)
         {
+            // Reset timer
+            _timer.Stop();
+            _timer.Start();
+
             _streamTokenHandler?.Invoke(this, args);
             if (args.Text == Commands.End)
             {
@@ -418,8 +430,6 @@ namespace RotatingTable.Xamarin.Services
                 IsRunning = false;
                 EndListening();
             }
-            // TODO: what happens if input never get "END"? - add here timeout for input
-            // Timer class?
         }
 
         public async Task<bool> StopAsync()
@@ -427,11 +437,9 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var result = await WriteWithResponseAsync(Commands.Stop,
+            var result = await WriteCommandAsync(Commands.Stop,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
-            if (_isListening)
-                EndListening();
-
+            IsRunning = false;
             return result;
         }
 
@@ -441,7 +449,7 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetSteps + ' ' + steps.ToString();
-            return await WriteWithResponseAsync(command,
+            return await WriteCommandAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -451,7 +459,7 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetAcceleration + ' ' + acceleration.ToString();
-            return await WriteWithResponseAsync(command,
+            return await WriteCommandAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -461,7 +469,7 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetDelay + ' ' + delay.ToString();
-            return await WriteWithResponseAsync(command,
+            return await WriteCommandAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -471,7 +479,7 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             var command = Commands.SetExposure + ' ' + exposure.ToString();
-            return await WriteWithResponseAsync(command,
+            return await WriteCommandAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
     }

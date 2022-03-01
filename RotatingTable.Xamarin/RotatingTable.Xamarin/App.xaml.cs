@@ -1,4 +1,5 @@
-﻿using RotatingTable.Xamarin.Services;
+﻿using Acr.UserDialogs;
+using RotatingTable.Xamarin.Services;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin
@@ -9,7 +10,7 @@ namespace RotatingTable.Xamarin
         {
             InitializeComponent();
             MainPage = new AppShell();
-            DependencyService.RegisterSingleton<IBluetoothService>(new BluetoothService());
+            DependencyService.RegisterSingleton<IBluetoothService>(new BluetoothService(UserDialogs.Instance));
             DependencyService.RegisterSingleton<IConfigService>(new ConfigService());
         }
 
