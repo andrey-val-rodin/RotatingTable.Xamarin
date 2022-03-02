@@ -47,6 +47,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 "Свободное перемещение"
             };
 
+        public IBluetoothService Service { get => DependencyService.Resolve<IBluetoothService>(); }
+
+        public IConfigService ConfigService { get => DependencyService.Resolve<IConfigService>(); }
+
         public bool IsConnected
         {
             get => _isConnected;
@@ -201,15 +205,12 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public async Task InitAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
+            IsConnected = Service.IsConnected;
 
-            IsConnected = service.IsConnected;
-
-            var steps = await configService.GetStepsAsync();
-            var acceleration = await configService.GetAccelerationAsync();
-            var delay = await configService.GetDelayAsync();
-            var exposure = await configService.GetExposureAsync();
+            var steps = await ConfigService.GetStepsAsync();
+            var acceleration = await ConfigService.GetAccelerationAsync();
+            var delay = await ConfigService.GetDelayAsync();
+            var exposure = await ConfigService.GetExposureAsync();
 
             StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == steps);
             Acceleration = acceleration;
@@ -219,8 +220,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task RunAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            if (_isBusy || service.IsRunning)
+            if (_isBusy || Service.IsRunning)
                 return;
 
             _isBusy = true;
@@ -229,12 +229,12 @@ namespace RotatingTable.Xamarin.ViewModels
                 switch (CurrentMode)
                 {
                     case (int)Mode.Auto:
-                        IsRunning = await service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
+                        IsRunning = await Service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
                         break;
 
                     case (int)Mode.Rotate90:
                     case (int)Mode.FreeMovement:
-                        IsRunning = await service.RunFreeMovementAsync();
+                        IsRunning = await Service.RunFreeMovementAsync();
                         break;
 
                     case (int)Mode.Manual:
@@ -254,7 +254,6 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public void OnDataReseived(string text)
         {
-//            System.Diagnostics.Debug.WriteLine($"Received text: '{text}'");
             if (text.StartsWith(Commands.Step))
             {
                 CurrentStep = int.TryParse(text.Substring(Commands.Step.Length), out int i) ? i : 0;
@@ -280,10 +279,9 @@ namespace RotatingTable.Xamarin.ViewModels
             _isBusy = true;
             try
             {
-                var service = DependencyService.Resolve<IBluetoothService>();
                 CurrentStep = 0;
                 CurrentPos = 0;
-                if (await service.StopAsync())
+                if (await Service.StopAsync())
                     IsRunning = false;
                 else
                 {
@@ -299,9 +297,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeStepsAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            var oldSteps = await configService.GetStepsAsync();
+            var oldSteps = await ConfigService.GetStepsAsync();
             var newSteps = StepValues[StepsIndex];
             if (newSteps == oldSteps)
                 return;
@@ -319,10 +315,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (!ConfigValidator.IsStepsValid(Steps))
                     return;
 
-                if (await service.SetStepsAsync(newSteps))
+                if (await Service.SetStepsAsync(newSteps))
                 {
                     // Store in persistent memory
-                    await configService.SetStepsAsync(newSteps);
+                    await ConfigService.SetStepsAsync(newSteps);
                     success = true;
                 }
             }
@@ -336,9 +332,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeAccelerationAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            var oldAcceleration = await configService.GetAccelerationAsync();
+            var oldAcceleration = await ConfigService.GetAccelerationAsync();
             var newAcceleration = Acceleration;
             if (newAcceleration == oldAcceleration)
                 return;
@@ -356,10 +350,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (!ConfigValidator.IsAccelerationValid(newAcceleration))
                     return;
 
-                if (await service.SetAccelerationAsync(newAcceleration))
+                if (await Service.SetAccelerationAsync(newAcceleration))
                 {
                     // Store in persistent memory
-                    await configService.SetAccelerationAsync(newAcceleration);
+                    await ConfigService.SetAccelerationAsync(newAcceleration);
                     success = true;
                 }
             }
@@ -373,9 +367,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeExposureAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            var oldExposure = await configService.GetExposureAsync();
+            var oldExposure = await ConfigService.GetExposureAsync();
             var newExposure = Exposure * 100;
             if (newExposure == oldExposure)
                 return;
@@ -393,10 +385,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (!ConfigValidator.IsExposureValid(newExposure))
                     return;
 
-                if (await service.SetExposureAsync(newExposure))
+                if (await Service.SetExposureAsync(newExposure))
                 {
                     // Store in persistent memory
-                    await configService.SetExposureAsync(newExposure);
+                    await ConfigService.SetExposureAsync(newExposure);
                     success = true;
                 }
             }
@@ -410,9 +402,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeDelayAsync()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            var oldDelay = await configService.GetDelayAsync();
+            var oldDelay = await ConfigService.GetDelayAsync();
             var newDelay = Delay * 100;
             if (newDelay == oldDelay)
                 return;
@@ -430,10 +420,10 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (!ConfigValidator.IsDelayValid(newDelay))
                     return;
 
-                if (await service.SetDelayAsync(newDelay))
+                if (await Service.SetDelayAsync(newDelay))
                 {
                     // Store in persistent memory
-                    await configService.SetDelayAsync(newDelay);
+                    await ConfigService.SetDelayAsync(newDelay);
                     success = true;
                 }
             }

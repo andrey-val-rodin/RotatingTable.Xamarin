@@ -22,7 +22,7 @@ namespace RotatingTable.Xamarin.Services
 
         private readonly IUserDialogs _userDialogs;
         private string _response;
-        private readonly ListeningStream _stream = new();
+        private ListeningStream _stream;
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
         private readonly List<string> _acceptedTokens = new();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
@@ -33,10 +33,6 @@ namespace RotatingTable.Xamarin.Services
             _userDialogs = userDialogs;
             _timer = new System.Timers.Timer(3000);
             _timer.AutoReset = false;
-            Timeout += (s, e) =>
-            {
-                _userDialogs.Alert("В процессе работы превышено время ожидания ответа от стола");
-            };
         }
 
         public event ElapsedEventHandler Timeout
@@ -74,24 +70,28 @@ namespace RotatingTable.Xamarin.Services
                     }
 
                     // Get characteristic
-                    Characteristic = await LoadCharacteristics(service, tokenSource.Token);
+                    Characteristic = await LoadCharacteristics(service);
                     if (Characteristic == null)
                     {
                         error = "Характеристика не обнаружена";
                         return false;
                     }
 
-                    // Start listening
+                    // Start listening from characteristic
                     IsConnected = true;
-                    await Characteristic.StartUpdatesAsync();
+                    _stream = new();
                     Characteristic.ValueUpdated += CharacteristicListeningHandler;
+                    await Characteristic.StartUpdatesAsync();
 
                     error = await CheckStatus();
-                    if (!string.IsNullOrEmpty(error))
+                    if (!string.IsNullOrEmpty(error) || !IsConnected)
                     {
                         IsConnected = false;
                         return false;
                     }
+
+                    if (tokenSource.Token.IsCancellationRequested)
+                        return false;
 
                     // Save config
                     var configService = DependencyService.Resolve<IConfigService>();
@@ -110,41 +110,51 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine(ex.Message);
                 if (!tokenSource.Token.IsCancellationRequested)
                     await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+
                 IsConnected = false;
                 return false;
             }
             finally
             {
+                if (tokenSource.Token.IsCancellationRequested)
+                    IsConnected = false;
                 tokenSource.Dispose();
+
                 if (!IsConnected)
                 {
                     if (!string.IsNullOrEmpty(error))
                         await _userDialogs.AlertAsync(error);
 
-                    if (Characteristic != null)
-                    {
-                        await Characteristic.StopUpdatesAsync();
-                        Characteristic = null;
-                    }
+                    await DisconnectAsync();
                 }
             }
         }
 
         public async Task DisconnectAsync()
         {
-            if (IsRunning)
-                throw new InvalidOperationException("Unable to disconnect while running");
-
-            if (Characteristic != null)
+            try
             {
-                await Characteristic.StopUpdatesAsync();
-                Characteristic = null;
-            }
+                if (IsRunning)
+                {
+                    // Abort listening
+                    EndListening();
+                }
 
-            IsConnected = false;
+                if (Characteristic != null)
+                {
+                    Characteristic.ValueUpdated -= CharacteristicListeningHandler;
+                    await Characteristic.StopUpdatesAsync();
+                }
+            }
+            finally
+            {
+                _stream = null;
+                Characteristic = null;
+                IsRunning = false;
+                IsConnected = false;
+            }
         }
 
         private void CharacteristicListeningHandler(object sender, CharacteristicUpdatedEventArgs args)
@@ -213,7 +223,7 @@ namespace RotatingTable.Xamarin.Services
             }
         }
 
-        private async Task<ICharacteristic> LoadCharacteristics(IService service, CancellationToken token)
+        private async Task<ICharacteristic> LoadCharacteristics(IService service)
         {
             try
             {
@@ -235,8 +245,9 @@ namespace RotatingTable.Xamarin.Services
                 // Ask the user if app should stop table
                 var result = await _userDialogs.PromptAsync(new PromptConfig
                 {
-                    Text = "Стол в процессе работы. Завершить?",
-                    CancelText = "Отмена",
+                    Title = "Стол в процессе работы",
+                    Text = "Завершить?",
+                    CancelText = "Нет",
                     OkText = "Да"
                 });
 
@@ -353,6 +364,21 @@ namespace RotatingTable.Xamarin.Services
             _stream.TokenUpdated -= RunningHandler;
             _streamTokenHandler = null;
             _timer.Stop();
+            IsRunning = false;
+        }
+
+        private void RunningHandler(object sender, DeviceInputEventArgs args)
+        {
+            // Reset timer
+            _timer.Stop();
+            _timer.Start();
+
+            _streamTokenHandler?.Invoke(this, args);
+            if (args.Text == Commands.End)
+            {
+                // Finishing
+                EndListening();
+            }
         }
 
         public async Task<string> GetStatusAsync()
@@ -415,21 +441,6 @@ namespace RotatingTable.Xamarin.Services
             }
 
             return success;
-        }
-
-        private void RunningHandler(object sender, DeviceInputEventArgs args)
-        {
-            // Reset timer
-            _timer.Stop();
-            _timer.Start();
-
-            _streamTokenHandler?.Invoke(this, args);
-            if (args.Text == Commands.End)
-            {
-                // Finishing
-                IsRunning = false;
-                EndListening();
-            }
         }
 
         public async Task<bool> StopAsync()

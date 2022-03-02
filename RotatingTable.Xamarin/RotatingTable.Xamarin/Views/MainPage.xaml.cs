@@ -7,6 +7,13 @@ using System;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 using RotatingTable.Xamarin.TouchTracking;
+using Plugin.BLE;
+using Plugin.BLE.Abstractions.Contracts;
+using Plugin.BLE.Abstractions.EventArgs;
+using Acr.UserDialogs;
+using System.Timers;
+using System.Threading.Tasks;
+using Xamarin.Essentials;
 
 namespace RotatingTable.Xamarin.Views
 {
@@ -14,6 +21,25 @@ namespace RotatingTable.Xamarin.Views
     public partial class MainPage : ContentPage
     {
         private readonly Selector _selector;
+        private readonly IUserDialogs _userDialogs;
+
+        public MainPage()
+        {
+            InitializeComponent();
+
+            _userDialogs = UserDialogs.Instance;
+            _selector = new(canvasView, Model);
+            
+            Model.CurrentStepChanged += OnCurrentStepChanged;
+            Model.CurrentPosChanged += OnCurrentPosChanged;
+            
+            Model.Stop += OnStop;
+            Adapter.DeviceConnectionLost += Adapter_DeviceConnectionLost;
+
+            Model.Service.Timeout += Service_Timeout;
+        }
+
+        private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
 
         public MainModel Model
         {
@@ -23,27 +49,21 @@ namespace RotatingTable.Xamarin.Views
             }
         }
 
-        public MainPage()
-        {
-            InitializeComponent();
-            _selector = new(canvasView, Model);
-            Model.CurrentStepChanged += OnCurrentStepChanged;
-            Model.CurrentPosChanged += OnCurrentPosChanged;
-            Model.Stop += OnStop;
-        }
-
         protected override async void OnAppearing()
         {
-            var service = DependencyService.Resolve<IBluetoothService>();
-            var configService = DependencyService.Resolve<IConfigService>();
-            if (!service.IsConnected)
+            await ConnectAsync();
+        }
+
+        private async Task ConnectAsync()
+        {
+            if (!Model.Service.IsConnected)
             {
-                var id = await configService.GetDeviceIdAsync();
+                var id = await Model.ConfigService.GetDeviceIdAsync();
                 if (id != Guid.Empty)
-                    await service.ConnectAsync(id);
+                    await Model.Service.ConnectAsync(id);
             }
 
-            if (service.IsConnected)
+            if (Model.Service.IsConnected)
                 await Model.InitAsync();
             else
                 await Shell.Current.GoToAsync("//ConnectPage");
@@ -72,6 +92,28 @@ namespace RotatingTable.Xamarin.Views
         private void OnStop(object sender, EventArgs args)
         {
             _selector.Clear();
+        }
+
+        private void Adapter_DeviceConnectionLost(object sender, DeviceErrorEventArgs e)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await _userDialogs.AlertAsync("Соединение со столом разорвано");
+                await Shell.Current.GoToAsync("//ConnectPage");
+            });
+        }
+
+
+        private void Service_Timeout(object sender, ElapsedEventArgs args)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await _userDialogs.AlertAsync("Превышено время ожидания ответа от стола в процессе работы");
+                await Model.Service.DisconnectAsync();
+                Model.IsRunning = false;
+                Model.IsConnected = false;
+                await ConnectAsync();
+            });
         }
     }
 }
