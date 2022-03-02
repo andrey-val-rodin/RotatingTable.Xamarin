@@ -18,7 +18,7 @@ namespace RotatingTable.Xamarin.Draw
             if (Model.CurrentStep > 0)
             {
                 var angle = 360 / Model.Steps;
-                var anchor = angle * Model.CurrentStep;
+                var anchor = angle * (Model.CurrentStep - 1) + 90;
                 DrawSector(anchor + Model.CurrentPos, angle - Model.CurrentPos);
             }
             DrawBorder();
