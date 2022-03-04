@@ -237,9 +237,12 @@ namespace RotatingTable.Xamarin.ViewModels
                         IsRunning = await Service.RunFreeMovementAsync();
                         break;
 
+                    case (int)Mode.Video:
+                        IsRunning = await Service.RunVideoAsync((s, a) => OnDataReseived(a.Text));
+                        break;
+
                     case (int)Mode.Manual:
                     case (int)Mode.Nonstop:
-                    case (int)Mode.Video:
                     default:
                         await Application.Current.MainPage.DisplayAlert("",
                             "Не поддерживается пока", "OK");

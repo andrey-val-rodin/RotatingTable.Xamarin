@@ -414,6 +414,14 @@ namespace RotatingTable.Xamarin.Services
             return await RunAsync(Commands.FreeMovement + angle, eventHandler);
         }
 
+        public async Task<bool> RunVideoAsync(EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.RunVideoMode, eventHandler);
+        }
+
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
         {
             if (IsRunning)

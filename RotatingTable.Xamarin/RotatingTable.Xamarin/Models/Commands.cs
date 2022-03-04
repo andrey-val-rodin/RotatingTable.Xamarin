@@ -30,5 +30,7 @@
         public const string Shutter         = "SHUTTER";
         public const string Next            = "NEXT";
         public const string Stop            = "STOP";
+        public const string IncreasePWM     = "INCPWM";
+        public const string DecreasePWM     = "DECPWM";
     }
 }
