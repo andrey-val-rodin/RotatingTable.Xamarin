@@ -290,9 +290,15 @@ namespace RotatingTable.Xamarin.Services
             return null;
         }
 
-        private async Task<string> WriteCommandAsync(string text, string[] acceptedTokens)
+        private async Task<bool> WriteCommandAsync(string command)
         {
-            System.Diagnostics.Debug.WriteLine($"Command: {text}");
+            return await WriteCommandAsync(command,
+                    new[] { Commands.OK, Commands.Error }) == Commands.OK;
+        }
+
+        private async Task<string> WriteCommandAsync(string command, string[] acceptedTokens)
+        {
+            System.Diagnostics.Debug.WriteLine($"Command: {command}");
 
             await _semaphore.WaitAsync();
 
@@ -300,14 +306,14 @@ namespace RotatingTable.Xamarin.Services
             _acceptedTokens.AddRange(acceptedTokens);
 
             // Append terminator
-            text += Terminator;
+            command += Terminator;
             
             try
             {
                 _stream.TokenUpdated += CommandHandler;
                 _response = null;
 
-                if (!await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(text)))
+                if (!await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(command)))
                     return null;
 
                 var token = new CancellationTokenSource(500).Token;
@@ -330,7 +336,7 @@ namespace RotatingTable.Xamarin.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
-                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+//                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
             }
             finally
@@ -420,6 +426,16 @@ namespace RotatingTable.Xamarin.Services
                 throw new InvalidOperationException("Not connected");
 
             return await RunAsync(Commands.RunVideoMode, eventHandler);
+        }
+
+        public async Task<bool> IncreasePWMAsync()
+        {
+            return await WriteCommandAsync(Commands.IncreasePWM);
+        }
+
+        public async Task<bool> DecreasePWMAsync()
+        {
+            return await WriteCommandAsync(Commands.DecreasePWM);
         }
 
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)

@@ -65,6 +65,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (SetProperty(ref _isRunning, value)) 
                 {
                     OnPropertyChanged("IsReady");
+                    OnPropertyChanged(nameof(ShowPWMChanging));
                     OnPropertyChanged(nameof(ShowSteps));
                     OnPropertyChanged(nameof(ShowAcceleration));
                     OnPropertyChanged(nameof(ShowExposure));
@@ -167,6 +168,12 @@ namespace RotatingTable.Xamarin.ViewModels
         public string DelayText
         {
             get => (Delay * 100).ToString();
+        }
+
+        public bool ShowPWMChanging
+        {
+            get => IsRunning &&
+                CurrentMode == (int)Mode.Video;
         }
 
         public bool ShowSteps

@@ -1,5 +1,4 @@
 ﻿using RotatingTable.Xamarin.Draw;
-using RotatingTable.Xamarin.Services;
 using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp.Views.Forms;
@@ -14,6 +13,7 @@ using Acr.UserDialogs;
 using System.Timers;
 using System.Threading.Tasks;
 using Xamarin.Essentials;
+using System.Threading;
 
 namespace RotatingTable.Xamarin.Views
 {
@@ -22,6 +22,7 @@ namespace RotatingTable.Xamarin.Views
     {
         private readonly Selector _selector;
         private readonly IUserDialogs _userDialogs;
+        private CancellationTokenSource _tokenSource;
 
         public MainPage()
         {
@@ -114,6 +115,77 @@ namespace RotatingTable.Xamarin.Views
                 Model.IsConnected = false;
                 await ConnectAsync();
             });
+        }
+
+        private void DecreasePWMButton_Pressed(object sender, EventArgs e)
+        {
+            if (_tokenSource != null)
+                return;
+
+            _tokenSource = new();
+            var token = _tokenSource.Token;
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (!await Model.Service.DecreasePWMAsync())
+                        break;
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    await Task.Delay(100);
+                }
+
+                _tokenSource.Dispose();
+                _tokenSource = null;
+            });
+        }
+
+        private void DecreasePWMButton_Released(object sender, EventArgs e)
+        {
+            _tokenSource?.Cancel();
+            _tokenSource?.Dispose();
+            _tokenSource = null;
+        }
+
+        private void IncreasePWMButton_Pressed(object sender, EventArgs e)
+        {
+            if (_tokenSource != null)
+                return;
+
+            _tokenSource = new();
+            var token = _tokenSource.Token;
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (!await Model.Service.IncreasePWMAsync())
+                        break;
+
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    await Task.Delay(100);
+                }
+
+                _tokenSource.Dispose();
+                _tokenSource = null;
+            });
+        }
+
+        private void IncreasePWMButton_Released(object sender, EventArgs e)
+        {
+            _tokenSource?.Cancel();
+            _tokenSource?.Dispose();
+            _tokenSource = null;
+        }
+
+        private void StopButton_Pressed(object sender, EventArgs e)
+        {
+            _tokenSource?.Cancel();
+            _tokenSource?.Dispose();
+            _tokenSource = null;
         }
     }
 }

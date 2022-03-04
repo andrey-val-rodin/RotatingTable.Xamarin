@@ -19,6 +19,8 @@ namespace RotatingTable.Xamarin.Services
         Task<bool> RunFreeMovementAsync();
         Task<bool> RotateAsync(int angle, EventHandler<DeviceInputEventArgs> eventHandler);
         Task<bool> RunVideoAsync(EventHandler<DeviceInputEventArgs> eventHandler);
+        Task<bool> IncreasePWMAsync();
+        Task<bool> DecreasePWMAsync();
         Task<bool> SetAccelerationAsync(int acceleration);
         Task<bool> SetDelayAsync(int delay);
         Task<bool> SetExposureAsync(int exposure);
