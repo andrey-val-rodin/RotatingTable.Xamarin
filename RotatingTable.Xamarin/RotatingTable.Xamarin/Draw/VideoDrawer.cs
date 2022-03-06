@@ -16,17 +16,17 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawLine();
+            DrawMarker();
             DrawBorder();
         }
 
-        private void DrawLine()
+        private void DrawMarker()
         {
             var angle = Model.CurrentPos % 360 + 90;
-            _paint.Style = SKPaintStyle.Stroke;
+            _paint.Style = SKPaintStyle.Fill;
             _paint.Shader = null;
-            _paint.Color = Color.Black.ToSKColor();//((Color)Application.Current.Resources["Border"]).ToSKColor();
-            Canvas.DrawLine(new SKPoint(0, 0), GetCirclePt(angle, Radius), _paint);
+            _paint.Color = Color.Blue.ToSKColor();
+            Canvas.DrawCircle(GetCirclePt(angle, Radius - 24), 10, _paint);
         }
 
         public override void Clear()

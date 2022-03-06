@@ -304,6 +304,8 @@ namespace RotatingTable.Xamarin.Services
 
             _acceptedTokens.Clear();
             _acceptedTokens.AddRange(acceptedTokens);
+            if (!_acceptedTokens.Contains(Commands.Undefined))
+                _acceptedTokens.Add(Commands.Undefined);
 
             // Append terminator
             command += Terminator;

@@ -30,14 +30,14 @@
                 <StackLayout Orientation="Horizontal">
                     <Button Text="&lt;&lt;"
                             IsVisible="{Binding ShowPWMChanging}"
-                            Pressed="DecreasePWMButton_Pressed"
-                            Released="DecreasePWMButton_Released"
+                            Pressed="IncreasePWMButton_Pressed"
+                            Released="IncreasePWMButton_Released"
                             HorizontalOptions="StartAndExpand"
                             WidthRequest="162"/>
                     <Button Text=">>"
                             IsVisible="{Binding ShowPWMChanging}"
-                            Pressed="IncreasePWMButton_Pressed"
-                            Released="IncreasePWMButton_Released"
+                            Pressed="DecreasePWMButton_Pressed"
+                            Released="DecreasePWMButton_Released"
                             HorizontalOptions="EndAndExpand"
                             WidthRequest="162"/>
                 </StackLayout>

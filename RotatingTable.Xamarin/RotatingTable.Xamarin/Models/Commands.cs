@@ -32,5 +32,6 @@
         public const string Stop            = "STOP";
         public const string IncreasePWM     = "INCPWM";
         public const string DecreasePWM     = "DECPWM";
+        public const string Undefined       = "UNDEF";
     }
 }

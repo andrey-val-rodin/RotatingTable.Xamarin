@@ -134,10 +134,10 @@ namespace RotatingTable.Xamarin.Views
                     if (token.IsCancellationRequested)
                         break;
 
-                    await Task.Delay(100);
+                    await Task.Delay(200);
                 }
 
-                _tokenSource.Dispose();
+                _tokenSource?.Dispose();
                 _tokenSource = null;
             });
         }
@@ -145,8 +145,6 @@ namespace RotatingTable.Xamarin.Views
         private void DecreasePWMButton_Released(object sender, EventArgs e)
         {
             _tokenSource?.Cancel();
-            _tokenSource?.Dispose();
-            _tokenSource = null;
         }
 
         private void IncreasePWMButton_Pressed(object sender, EventArgs e)
@@ -166,10 +164,10 @@ namespace RotatingTable.Xamarin.Views
                     if (token.IsCancellationRequested)
                         break;
 
-                    await Task.Delay(100);
+                    await Task.Delay(200);
                 }
 
-                _tokenSource.Dispose();
+                _tokenSource?.Dispose();
                 _tokenSource = null;
             });
         }
@@ -177,15 +175,11 @@ namespace RotatingTable.Xamarin.Views
         private void IncreasePWMButton_Released(object sender, EventArgs e)
         {
             _tokenSource?.Cancel();
-            _tokenSource?.Dispose();
-            _tokenSource = null;
         }
 
         private void StopButton_Pressed(object sender, EventArgs e)
         {
             _tokenSource?.Cancel();
-            _tokenSource?.Dispose();
-            _tokenSource = null;
         }
     }
 }
