@@ -32,7 +32,7 @@ namespace RotatingTable.Xamarin.Draw
 
             DrawCircle();
             DrawSelectedSector();
-            DrawArrow();
+            DrawArrow(StartAngle, EndAngle, -24);
             if (_isDragging)
                 DrawText(-Radius, -Radius + 50, $"{Angle}°", 40, SKTextAlign.Left);
             DrawBorder();
@@ -44,45 +44,6 @@ namespace RotatingTable.Xamarin.Draw
                 return;
 
             DrawSector(StartAngle, Angle);
-        }
-
-        private void DrawArrow()
-        {
-            const int indent = 24;
-
-            if (Math.Abs(Angle) < 8)
-                return;
-
-            var path = new SKPath();
-            var rect = Rect;
-            rect.Inflate(-indent, -indent);
-            path.ArcTo(rect, StartAngle, Angle, true);
-
-            // Draw arc
-            _paint.Style = SKPaintStyle.Stroke;
-            _paint.Shader = null;
-            _paint.Color = ((Color)Application.Current.Resources["Arrow"]).ToSKColor();
-            Canvas.DrawPath(path, _paint);
-
-            // Draw arrow
-            _paint.Style = SKPaintStyle.Fill;
-            path = new SKPath();
-            if (Angle > 0)
-            {
-                path.MoveTo(GetCirclePt(EndAngle, Radius - indent));
-                path.LineTo(GetCirclePt(EndAngle - 4, Radius - indent + 5));
-                path.LineTo(GetCirclePt(EndAngle - 4, Radius - indent - 5));
-                path.Close();
-                Canvas.DrawPath(path, _paint);
-            }
-            else
-            {
-                path.MoveTo(GetCirclePt(EndAngle, Radius - indent));
-                path.LineTo(GetCirclePt(EndAngle + 4, Radius - indent + 5));
-                path.LineTo(GetCirclePt(EndAngle + 4, Radius - indent - 5));
-                path.Close();
-                Canvas.DrawPath(path, _paint);
-            }
         }
 
         protected async Task<bool> StartMovementAsync()

@@ -173,21 +173,18 @@ namespace RotatingTable.Xamarin.ViewModels
         public bool ShowPWMChanging
         {
             get => IsRunning &&
-                CurrentMode == (int)Mode.Video;
+                (CurrentMode == (int)Mode.Video || CurrentMode == (int)Mode.Nonstop);
         }
 
         public bool ShowSteps
         {
-            get => !IsRunning ||
-                CurrentMode == (int)Mode.Auto ||
-                CurrentMode == (int)Mode.Manual ||
-                CurrentMode == (int)Mode.Nonstop;
+            get => !IsRunning;
         }
 
         public bool ShowAcceleration
         {
             get => !IsRunning ||
-                CurrentMode != (int)Mode.Video;
+                (CurrentMode == (int)Mode.Auto || CurrentMode == (int)Mode.Manual);
         }
 
         public bool ShowExposure
@@ -202,6 +199,9 @@ namespace RotatingTable.Xamarin.ViewModels
             get => !IsRunning ||
                 CurrentMode == (int)Mode.Auto;
         }
+
+        public bool IsIncreasingPWM { get; set; }
+        public bool IsDecreasingPWM { get; set; }
 
         public Command RunCommand { get; }
         public Command StopCommand { get; }
@@ -236,7 +236,16 @@ namespace RotatingTable.Xamarin.ViewModels
                 switch (CurrentMode)
                 {
                     case (int)Mode.Auto:
-                        IsRunning = await Service.RunAutoModeAsync((s, a) => OnDataReseived(a.Text));
+                        IsRunning = await Service.RunAutoAsync((s, a) => OnDataReseived(a.Text));
+                        break;
+
+                    case (int)Mode.Manual:
+                        await Application.Current.MainPage.DisplayAlert("",//TODO
+                            "Не поддерживается пока", "OK");
+                        break;
+
+                    case (int)Mode.Nonstop:
+                        IsRunning = await Service.RunNonStopAsync((s, a) => OnDataReseived(a.Text));
                         break;
 
                     case (int)Mode.Rotate90:
@@ -248,12 +257,8 @@ namespace RotatingTable.Xamarin.ViewModels
                         IsRunning = await Service.RunVideoAsync((s, a) => OnDataReseived(a.Text));
                         break;
 
-                    case (int)Mode.Manual:
-                    case (int)Mode.Nonstop:
                     default:
-                        await Application.Current.MainPage.DisplayAlert("",
-                            "Не поддерживается пока", "OK");
-                        break;
+                        throw new InvalidOperationException($"Invalid CurrentMode: {CurrentMode}");
                 }
             }
             finally

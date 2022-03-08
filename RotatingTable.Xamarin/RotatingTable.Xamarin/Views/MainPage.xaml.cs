@@ -124,21 +124,36 @@ namespace RotatingTable.Xamarin.Views
 
             _tokenSource = new();
             var token = _tokenSource.Token;
+            Model.IsDecreasingPWM = true;
+
             Task.Run(async () =>
             {
-                while (true)
+                try
                 {
-                    if (!await Model.Service.DecreasePWMAsync())
-                        break;
+                    while (true)
+                    {
+                        if (token.IsCancellationRequested)
+                            break;
 
-                    if (token.IsCancellationRequested)
-                        break;
+                        if (!await Model.Service.DecreasePWMAsync())
+                            break;
 
-                    await Task.Delay(200);
+                        if (token.IsCancellationRequested)
+                            break;
+
+                        await Task.Delay(200, token);
+                    }
                 }
-
-                _tokenSource?.Dispose();
-                _tokenSource = null;
+                catch (TaskCanceledException) { }
+                finally
+                {
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        Model.IsDecreasingPWM = false;
+                        _tokenSource?.Dispose();
+                        _tokenSource = null;
+                    });
+                }
             });
         }
 
@@ -154,21 +169,36 @@ namespace RotatingTable.Xamarin.Views
 
             _tokenSource = new();
             var token = _tokenSource.Token;
+            Model.IsIncreasingPWM = true;
+
             Task.Run(async () =>
             {
-                while (true)
+                try
                 {
-                    if (!await Model.Service.IncreasePWMAsync())
-                        break;
+                    while (true)
+                    {
+                        if (token.IsCancellationRequested)
+                            break;
 
-                    if (token.IsCancellationRequested)
-                        break;
+                        if (!await Model.Service.IncreasePWMAsync())
+                            break;
 
-                    await Task.Delay(200);
+                        if (token.IsCancellationRequested)
+                            break;
+
+                        await Task.Delay(200, token);
+                    }
                 }
-
-                _tokenSource?.Dispose();
-                _tokenSource = null;
+                catch (TaskCanceledException) { }
+                finally
+                {
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        Model.IsIncreasingPWM = false;
+                        _tokenSource?.Dispose();
+                        _tokenSource = null;
+                    });
+                }
             });
         }
 

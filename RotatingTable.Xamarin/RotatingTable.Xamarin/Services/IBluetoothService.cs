@@ -15,7 +15,8 @@ namespace RotatingTable.Xamarin.Services
         Task DisconnectAsync();
 
         Task<string> GetStatusAsync();
-        Task<bool> RunAutoModeAsync(EventHandler<DeviceInputEventArgs> eventHandler);
+        Task<bool> RunAutoAsync(EventHandler<DeviceInputEventArgs> eventHandler);
+        Task<bool> RunNonStopAsync(EventHandler<DeviceInputEventArgs> eventHandler);
         Task<bool> RunFreeMovementAsync();
         Task<bool> RotateAsync(int angle, EventHandler<DeviceInputEventArgs> eventHandler);
         Task<bool> RunVideoAsync(EventHandler<DeviceInputEventArgs> eventHandler);

@@ -12,6 +12,7 @@ namespace RotatingTable.Xamarin.Draw
         public Selector(SKCanvasView canvasView, MainModel model)
         {
             _drawers[(int)Mode.Auto] = new AutoDrawer(canvasView, model);
+            _drawers[(int)Mode.Nonstop] = new NonStopDrawer(canvasView, model);
             _drawers[(int)Mode.Rotate90] = new Rotate90Drawer(canvasView, model);
             _drawers[(int)Mode.FreeMovement] = new FreeMovementDrawer(canvasView, model);
             _drawers[(int)Mode.Video] = new VideoDrawer(canvasView, model);

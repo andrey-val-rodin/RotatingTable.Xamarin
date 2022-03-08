@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Xamarin.Essentials;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.Services
@@ -314,19 +315,24 @@ namespace RotatingTable.Xamarin.Services
             {
                 _stream.TokenUpdated += CommandHandler;
                 _response = null;
+                Characteristic.WriteType = CharacteristicWriteType.WithoutResponse;
 
-                if (!await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(command)))
+                // See API limitations in https://github.com/xabre/xamarin-bluetooth-le
+                // "Characteristic/Descriptor Write: make sure you call characteristic.WriteAsync(...) from the main thread,
+                // failing to do so will most probably result in a GattWriteError."
+                if (!await MainThread.InvokeOnMainThreadAsync(async () =>
+                    await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
                 var token = new CancellationTokenSource(500).Token;
-                string response = null;
-                await Task.Run(() =>
+                string response = await Task.Run(async () =>
                 {
                     while (true)
                     {
-                        response = _response;
-                        if (!string.IsNullOrEmpty(response) || token.IsCancellationRequested)
-                            return;
+                        if (!string.IsNullOrEmpty(_response) || token.IsCancellationRequested)
+                            return _response;
+
+                        await Task.Delay(5);
                     }
                 }, token);
 
@@ -350,10 +356,11 @@ namespace RotatingTable.Xamarin.Services
 
         private void CommandHandler(object sender, DeviceInputEventArgs args)
         {
-            var token = args.Text;
+            // Take only first accepted token
+            if (!string.IsNullOrEmpty(_response))
+                return;
 
-            // Take only first eccepted token
-            if (string.IsNullOrEmpty(_response) && _acceptedTokens.Contains(token))
+            if (_acceptedTokens.Contains(args.Text))
                 _response = args.Text;
         }
 
@@ -398,12 +405,20 @@ namespace RotatingTable.Xamarin.Services
                 new[] { Commands.Running, Commands.Busy, Commands.Ready });
         }
 
-        public async Task<bool> RunAutoModeAsync(EventHandler<DeviceInputEventArgs> eventHandler)
+        public async Task<bool> RunAutoAsync(EventHandler<DeviceInputEventArgs> eventHandler)
         {
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
             return await RunAsync(Commands.RunAutoMode, eventHandler);
+        }
+
+        public async Task<bool> RunNonStopAsync(EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.RunNonStopMode, eventHandler);
         }
 
         public async Task<bool> RunFreeMovementAsync()

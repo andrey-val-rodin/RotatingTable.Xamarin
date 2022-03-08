@@ -55,7 +55,8 @@
                     <StackLayout Orientation="Horizontal">
                         <Label Text="Количество шагов"/>
                         <Label Text="{Binding Steps}"
-                           HorizontalOptions="EndAndExpand"/>
+                               FontAttributes="Bold"
+                               HorizontalOptions="EndAndExpand"/>
                     </StackLayout>
                     <Slider MinimumTrackColor="Gray"
                             MaximumTrackColor="Gray"
@@ -69,6 +70,7 @@
                     <StackLayout Orientation="Horizontal">
                         <Label Text="Ускорение"/>
                         <Label Text="{Binding AccelerationText}"
+                               FontAttributes="Bold"
                                HorizontalOptions="EndAndExpand"/>
                     </StackLayout>
                     <Slider MinimumTrackColor="Gray"
@@ -83,6 +85,7 @@
                     <StackLayout Orientation="Horizontal">
                         <Label Text="Экспозиция"/>
                         <Label Text="{Binding ExposureText}"
+                               FontAttributes="Bold"
                                HorizontalOptions="EndAndExpand"/>
                     </StackLayout>
                     <Slider MinimumTrackColor="Gray"
@@ -94,9 +97,10 @@
                 
                 <StackLayout IsVisible="{Binding ShowDelay}">
                     <StackLayout Orientation="Horizontal">
-                    <Label Text="Задержка"/>
-                    <Label Text="{Binding DelayText}"
-                           HorizontalOptions="EndAndExpand"/>
+                        <Label Text="Задержка"/>
+                        <Label Text="{Binding DelayText}"
+                               FontAttributes="Bold"
+                               HorizontalOptions="EndAndExpand"/>
                     </StackLayout>
                     <Slider MinimumTrackColor="Gray"
                             MaximumTrackColor="Gray"

@@ -99,6 +99,45 @@ namespace RotatingTable.Xamarin.Draw
             Canvas.DrawPath(path, _paint);
         }
 
+        protected void DrawArrow(int startAngle, int endAngle, int indent)
+        {
+            var angle = endAngle - startAngle;
+
+            if (Math.Abs(angle) < 8)
+                return;
+
+            var path = new SKPath();
+            var rect = Rect;
+            rect.Inflate(indent, indent);
+            path.ArcTo(rect, startAngle, angle, true);
+
+            // Draw arc
+            _paint.Style = SKPaintStyle.Stroke;
+            _paint.Shader = null;
+            _paint.Color = ((Color)Application.Current.Resources["Arrow"]).ToSKColor();
+            Canvas.DrawPath(path, _paint);
+
+            // Draw arrow
+            _paint.Style = SKPaintStyle.Fill;
+            path = new SKPath();
+            if (angle > 0)
+            {
+                path.MoveTo(GetCirclePt(endAngle, Radius + indent));
+                path.LineTo(GetCirclePt(endAngle - 4, Radius + indent + 5));
+                path.LineTo(GetCirclePt(endAngle - 4, Radius + indent - 5));
+                path.Close();
+                Canvas.DrawPath(path, _paint);
+            }
+            else
+            {
+                path.MoveTo(GetCirclePt(endAngle, Radius + indent));
+                path.LineTo(GetCirclePt(endAngle + 4, Radius + indent + 5));
+                path.LineTo(GetCirclePt(endAngle + 4, Radius + indent - 5));
+                path.Close();
+                Canvas.DrawPath(path, _paint);
+            }
+        }
+
         protected SKPoint GetCirclePt(int angleDegrees, int raduis)
         {
             return new SKPoint

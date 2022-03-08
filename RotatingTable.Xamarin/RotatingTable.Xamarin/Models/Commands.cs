@@ -18,7 +18,6 @@
         public const string SetSteps        = "SET STEPS";
         public const string SetExposure     = "SET EXP";
         public const string SetDelay        = "SET DELAY";
-        public const string GetPosition     = "GET POS";
         public const string Position        = "POS ";
         public const string GetMode         = "GET MODE";
         public const string RunAutoMode     = "RUN AUTO";
