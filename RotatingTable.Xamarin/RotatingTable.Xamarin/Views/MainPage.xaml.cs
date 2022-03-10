@@ -119,12 +119,13 @@ namespace RotatingTable.Xamarin.Views
 
         private void DecreasePWMButton_Pressed(object sender, EventArgs e)
         {
-            if (_tokenSource != null)
+            if (Model.IsIncreasingPWM || Model.IsDecreasingPWM)
                 return;
 
+            Cancel();
+            Model.IsDecreasingPWM = true;
             _tokenSource = new();
             var token = _tokenSource.Token;
-            Model.IsDecreasingPWM = true;
 
             Task.Run(async () =>
             {
@@ -144,14 +145,14 @@ namespace RotatingTable.Xamarin.Views
                         await Task.Delay(200, token);
                     }
                 }
-                catch (TaskCanceledException) { }
+                catch { }
                 finally
                 {
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
                         Model.IsDecreasingPWM = false;
-                        _tokenSource?.Dispose();
-                        _tokenSource = null;
+//                        _tokenSource?.Dispose();
+//                        _tokenSource = null;
                     });
                 }
             });
@@ -159,17 +160,18 @@ namespace RotatingTable.Xamarin.Views
 
         private void DecreasePWMButton_Released(object sender, EventArgs e)
         {
-            _tokenSource?.Cancel();
+            Cancel();
         }
 
         private void IncreasePWMButton_Pressed(object sender, EventArgs e)
         {
-            if (_tokenSource != null)
+            if (Model.IsIncreasingPWM || Model.IsDecreasingPWM)
                 return;
 
+            Cancel();
+            Model.IsIncreasingPWM = true;
             _tokenSource = new();
             var token = _tokenSource.Token;
-            Model.IsIncreasingPWM = true;
 
             Task.Run(async () =>
             {
@@ -189,14 +191,14 @@ namespace RotatingTable.Xamarin.Views
                         await Task.Delay(200, token);
                     }
                 }
-                catch (TaskCanceledException) { }
+                catch { }
                 finally
                 {
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
                         Model.IsIncreasingPWM = false;
-                        _tokenSource?.Dispose();
-                        _tokenSource = null;
+//                        _tokenSource?.Dispose();
+//                        _tokenSource = null;
                     });
                 }
             });
@@ -204,12 +206,19 @@ namespace RotatingTable.Xamarin.Views
 
         private void IncreasePWMButton_Released(object sender, EventArgs e)
         {
-            _tokenSource?.Cancel();
+            Cancel();
         }
 
         private void StopButton_Pressed(object sender, EventArgs e)
         {
+            Cancel();
+        }
+
+        private void Cancel()
+        {
             _tokenSource?.Cancel();
+            Model.IsIncreasingPWM = false;
+            Model.IsDecreasingPWM = false;
         }
     }
 }

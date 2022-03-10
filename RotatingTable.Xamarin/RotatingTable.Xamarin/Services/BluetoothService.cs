@@ -18,7 +18,11 @@ namespace RotatingTable.Xamarin.Services
 {
     public class BluetoothService : IBluetoothService
     {
-        private static readonly Guid ServiceUuid = new("e7810a71-73ae-499d-8c15-faa9aef0c3f2");
+        //private static readonly Guid ServiceUuid = new("e7810a71-73ae-499d-8c15-faa9aef0c3f2");
+        private static readonly Guid ServiceUuid = new("000018f0-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid UpdatesCharacteristicUuid = new("00002af0-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid WriteCharacteristicUuid = new("00002af1-0000-1000-8000-00805f9b34fb");
+
         public const char Terminator = '\n';
 
         private readonly IUserDialogs _userDialogs;
@@ -43,13 +47,17 @@ namespace RotatingTable.Xamarin.Services
         }
 
         private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
-        private ICharacteristic Characteristic { get; set; }
+        private ICharacteristic WriteCharacteristic { get; set; }
+        private ICharacteristic UpdatesCharacteristic { get; set; }
 
         public bool IsConnected { get; private set; }
         public bool IsRunning { get; private set; }
 
         public async Task<bool> ConnectAsync<T>(T deviceOrId)
         {
+            if (IsConnected)
+                throw new InvalidOperationException("Connected already");
+
             CancellationTokenSource tokenSource = new();
             string error = null;
             try
@@ -70,19 +78,11 @@ namespace RotatingTable.Xamarin.Services
                         return false;
                     }
 
-                    // Get characteristic
-                    Characteristic = await LoadCharacteristics(service);
-                    if (Characteristic == null)
+                    if (!await LoadCharacteristics(service))
                     {
                         error = "Характеристика не обнаружена";
                         return false;
                     }
-
-                    // Start listening from characteristic
-                    IsConnected = true;
-                    _stream = new();
-                    Characteristic.ValueUpdated += CharacteristicListeningHandler;
-                    await Characteristic.StartUpdatesAsync();
 
                     error = await CheckStatus();
                     if (!string.IsNullOrEmpty(error) || !IsConnected)
@@ -111,6 +111,7 @@ namespace RotatingTable.Xamarin.Services
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
                 if (!tokenSource.Token.IsCancellationRequested)
                     await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
 
@@ -143,16 +144,21 @@ namespace RotatingTable.Xamarin.Services
                     EndListening();
                 }
 
-                if (Characteristic != null)
+                if (UpdatesCharacteristic != null)
                 {
-                    Characteristic.ValueUpdated -= CharacteristicListeningHandler;
-                    await Characteristic.StopUpdatesAsync();
+                    UpdatesCharacteristic.ValueUpdated -= CharacteristicListeningHandler;
+                    await UpdatesCharacteristic.StopUpdatesAsync();
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
             }
             finally
             {
                 _stream = null;
-                Characteristic = null;
+                UpdatesCharacteristic = null;
+                WriteCharacteristic = null;
                 IsRunning = false;
                 IsConnected = false;
             }
@@ -224,17 +230,32 @@ namespace RotatingTable.Xamarin.Services
             }
         }
 
-        private async Task<ICharacteristic> LoadCharacteristics(IService service)
+        private async Task<bool> LoadCharacteristics(IService service)
         {
             try
             {
                 var characteristics = await service.GetCharacteristicsAsync();
-                return characteristics.FirstOrDefault();
+                UpdatesCharacteristic = characteristics.FirstOrDefault(c => c.Id == UpdatesCharacteristicUuid);
+                if (UpdatesCharacteristic == null)
+                    return false;
+
+                // Start listening from characteristic
+                IsConnected = true;
+                _stream = new();
+                UpdatesCharacteristic.ValueUpdated += CharacteristicListeningHandler;
+                await UpdatesCharacteristic.StartUpdatesAsync();
+
+                WriteCharacteristic = characteristics.FirstOrDefault(c => c.Id == WriteCharacteristicUuid);
+                if (WriteCharacteristic == null)
+                    return false;
+
+                WriteCharacteristic.WriteType = CharacteristicWriteType.WithoutResponse;
+                return true;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
-                return null;
+                return false;
             }
         }
 
@@ -310,18 +331,17 @@ namespace RotatingTable.Xamarin.Services
 
             // Append terminator
             command += Terminator;
-            
+
             try
             {
                 _stream.TokenUpdated += CommandHandler;
                 _response = null;
-                Characteristic.WriteType = CharacteristicWriteType.WithoutResponse;
 
                 // See API limitations in https://github.com/xabre/xamarin-bluetooth-le
                 // "Characteristic/Descriptor Write: make sure you call characteristic.WriteAsync(...) from the main thread,
                 // failing to do so will most probably result in a GattWriteError."
                 if (!await MainThread.InvokeOnMainThreadAsync(async () =>
-                    await Characteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
+                    await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
                 var token = new CancellationTokenSource(500).Token;
@@ -344,7 +364,7 @@ namespace RotatingTable.Xamarin.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
-//                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
                 return null;
             }
             finally
