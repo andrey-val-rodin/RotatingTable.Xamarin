@@ -29,6 +29,7 @@
         public const string Shutter         = "SHUTTER";
         public const string Next            = "NEXT";
         public const string Stop            = "STOP";
+        public const string SoftStop        = "SOFTSTOP";
         public const string IncreasePWM     = "INCPWM";
         public const string DecreasePWM     = "DECPWM";
         public const string Undefined       = "UNDEF";

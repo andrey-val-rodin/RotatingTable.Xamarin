@@ -3,6 +3,7 @@ using Plugin.BLE;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
+using RotatingTable.Xamarin.Handlers;
 using RotatingTable.Xamarin.Models;
 using System;
 using System.Collections.Generic;
@@ -29,9 +30,11 @@ namespace RotatingTable.Xamarin.Services
         private string _response;
         private ListeningStream _stream;
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
+        private StopEventHandler _waitingEventHandler;
         private readonly List<string> _acceptedTokens = new();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly System.Timers.Timer _timer;
+        private System.Timers.Timer _timer2;
 
         public BluetoothService(IUserDialogs userDialogs)
         {
@@ -51,7 +54,7 @@ namespace RotatingTable.Xamarin.Services
         private ICharacteristic UpdatesCharacteristic { get; set; }
 
         public bool IsConnected { get; private set; }
-        public bool IsRunning { get; private set; }
+        private bool IsListening { get; set; }
 
         public async Task<bool> ConnectAsync<T>(T deviceOrId)
         {
@@ -138,7 +141,7 @@ namespace RotatingTable.Xamarin.Services
         {
             try
             {
-                if (IsRunning)
+                if (IsListening)
                 {
                     // Abort listening
                     EndListening();
@@ -159,7 +162,7 @@ namespace RotatingTable.Xamarin.Services
                 _stream = null;
                 UpdatesCharacteristic = null;
                 WriteCharacteristic = null;
-                IsRunning = false;
+                IsListening = false;
                 IsConnected = false;
             }
         }
@@ -326,8 +329,6 @@ namespace RotatingTable.Xamarin.Services
 
             _acceptedTokens.Clear();
             _acceptedTokens.AddRange(acceptedTokens);
-            if (!_acceptedTokens.Contains(Commands.Undefined))
-                _acceptedTokens.Add(Commands.Undefined);
 
             // Append terminator
             command += Terminator;
@@ -390,19 +391,20 @@ namespace RotatingTable.Xamarin.Services
                 throw new ArgumentNullException(nameof(handler));
 
             _streamTokenHandler = handler;
-            _stream.TokenUpdated += RunningHandler;
+            _stream.TokenUpdated += ListeningHandler;
             _timer.Start();
+            IsListening = true;
         }
 
         private void EndListening()
         {
-            _stream.TokenUpdated -= RunningHandler;
+            _stream.TokenUpdated -= ListeningHandler;
             _streamTokenHandler = null;
             _timer.Stop();
-            IsRunning = false;
+            IsListening = false;
         }
 
-        private void RunningHandler(object sender, DeviceInputEventArgs args)
+        private void ListeningHandler(object sender, DeviceInputEventArgs args)
         {
             // Reset timer
             _timer.Stop();
@@ -477,15 +479,14 @@ namespace RotatingTable.Xamarin.Services
 
         private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
         {
-            if (IsRunning)
-                throw new InvalidOperationException("Running already");
+            if (IsListening)
+                throw new InvalidOperationException("Listening already");
 
             var success = false;
             try
             {
                 if (eventHandler != null)
                 {
-                    IsRunning = true;
                     BeginListening(eventHandler);
                 }
 
@@ -495,10 +496,7 @@ namespace RotatingTable.Xamarin.Services
             finally
             {
                 if (!success)
-                {
-                    IsRunning = false;
                     EndListening();
-                }
             }
 
             return success;
@@ -511,8 +509,55 @@ namespace RotatingTable.Xamarin.Services
 
             var result = await WriteCommandAsync(Commands.Stop,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
-            IsRunning = false;
+
             return result;
+        }
+
+        public async Task<bool> SoftStopAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var result = await WriteCommandAsync(Commands.SoftStop,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
+
+            return result;
+        }
+
+        public void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout)
+        {
+            _waitingEventHandler = onStop;
+            _timer2 = new System.Timers.Timer(5000);
+            _timer2.AutoReset = false;
+            _timer2.Elapsed += async (s, a) =>
+            {
+                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+                CancelWaitingForStop();
+                onTimeout?.Invoke(this, EventArgs.Empty);
+            };
+            _timer2.Start();
+
+            _stream.TokenUpdated += WaitingHandler;
+        }
+
+        private void WaitingHandler(object sender, DeviceInputEventArgs args)
+        {
+            if (args.Text == Commands.End)
+            {
+                CancelWaitingForStop();
+                _waitingEventHandler?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        public void CancelWaitingForStop()
+        {
+            if (_timer2 != null)
+            {
+                _timer2.Stop();
+                _timer2.Dispose();
+                _timer2 = null;
+            }
+            _stream.TokenUpdated -= WaitingHandler;
         }
 
         public async Task<bool> SetStepsAsync(int steps)

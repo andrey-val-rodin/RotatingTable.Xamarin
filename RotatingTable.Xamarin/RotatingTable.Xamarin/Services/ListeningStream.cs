@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RotatingTable.Xamarin.Handlers;
+using System;
 using System.IO;
 
 namespace RotatingTable.Xamarin.Services

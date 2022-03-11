@@ -1,6 +1,8 @@
-﻿using RotatingTable.Xamarin.Models;
+﻿using RotatingTable.Xamarin.Handlers;
+using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -11,13 +13,14 @@ namespace RotatingTable.Xamarin.ViewModels
         public event CurrentStepChangedEventHandler CurrentStepChanged;
         public event CurrentPosChangedEventHandler CurrentPosChanged;
         public event StopEventHandler Stop;
+        public event WaitingTimeoutHandler WaitingTimeout;
 
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
         private bool _isConnected;
         private bool _isRunning;
-        private bool _isBusy;
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private int _currentMode;
         private int _currentStep;
         private int _currentPos;
@@ -25,9 +28,12 @@ namespace RotatingTable.Xamarin.ViewModels
         private int _acceleration;
         private int _exposure;
         private int _delay;
+        private string _stopButtonText;
+        private bool _isSoftStopping;
 
         public MainModel()
         {
+            StopButtonText = "Стоп";
             RunCommand = new Command(async () => await RunAsync());
             StopCommand = new Command(async () => await StopAsync());
             ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
@@ -203,6 +209,22 @@ namespace RotatingTable.Xamarin.ViewModels
         public bool IsIncreasingPWM { get; set; }
         public bool IsDecreasingPWM { get; set; }
 
+        private bool IsSoftStopping
+        {
+            get => _isSoftStopping;
+            set
+            {
+                StopButtonText = value ? "Остановка..." : "Стоп";
+                _isSoftStopping = value;
+            }
+        }
+        public string StopButtonText
+        {
+            get => _stopButtonText;
+            set => SetProperty(ref _stopButtonText, value);
+        }
+
+
         public Command RunCommand { get; }
         public Command StopCommand { get; }
         public Command ChangeStepsCommand { get; }
@@ -227,10 +249,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task RunAsync()
         {
-            if (_isBusy || Service.IsRunning)
-                return;
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             try
             {
                 switch (CurrentMode)
@@ -263,7 +282,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
             }
         }
 
@@ -288,25 +307,63 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task StopAsync()
         {
-            if (_isBusy)
-                return;
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             try
             {
+                if (!IsRunning)
+                    return;
+
                 CurrentStep = 0;
                 CurrentPos = 0;
-                if (await Service.StopAsync())
-                    IsRunning = false;
+                if (CurrentMode == (int)Mode.Video)
+                {
+                    if (!IsSoftStopping)
+                    {
+                        if (!await Service.SoftStopAsync())
+                        {
+                            await Service.StopAsync();
+                            return;
+                        }
+
+                        IsSoftStopping = true;
+                        Service.BeginWaitingForStop(
+                            (s, a) =>
+                            {
+                                IsSoftStopping = false;
+                                IsRunning = false;
+                                Stop?.Invoke(this, EventArgs.Empty);
+                            },
+                            async (s, a) =>
+                            {
+                                IsSoftStopping = false;
+                                IsRunning = false;
+                                await Service.StopAsync();
+                                bool ready = await Service.GetStatusAsync() == Commands.Ready;
+                                if (ready)
+                                    Stop?.Invoke(this, EventArgs.Empty);
+                                else
+                                    WaitingTimeout?.Invoke(this, EventArgs.Empty);
+                            });
+                    }
+                    else
+                    {
+                        Service.CancelWaitingForStop();
+                        await Service.StopAsync();
+                        IsSoftStopping = false;
+                        IsRunning = false;
+                        Stop?.Invoke(this, EventArgs.Empty);
+                    }
+                }
                 else
                 {
-                    //TODO what to do here?
+                    await Service.StopAsync();
+                    IsRunning = false;
+                    Stop?.Invoke(this, EventArgs.Empty);
                 }
-                Stop?.Invoke(this, EventArgs.Empty);
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
             }
         }
 
@@ -317,13 +374,7 @@ namespace RotatingTable.Xamarin.ViewModels
             if (newSteps == oldSteps)
                 return;
 
-            if (_isBusy)
-            {
-                await InitAsync(); // back to old value (restore defaults)
-                return;
-            }
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             bool success = false;
             try
             {
@@ -339,7 +390,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
                 if (!success)
                     await InitAsync(); // back to old value (restore defaults)
             }
@@ -352,13 +403,7 @@ namespace RotatingTable.Xamarin.ViewModels
             if (newAcceleration == oldAcceleration)
                 return;
 
-            if (_isBusy)
-            {
-                await InitAsync(); // back to old value (restore defaults)
-                return;
-            }
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             bool success = false;
             try
             {
@@ -374,7 +419,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
                 if (!success)
                     await InitAsync(); // back to old value (restore defaults)
             }
@@ -387,13 +432,7 @@ namespace RotatingTable.Xamarin.ViewModels
             if (newExposure == oldExposure)
                 return;
 
-            if (_isBusy)
-            {
-                await InitAsync(); // back to old value (restore defaults)
-                return;
-            }
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             bool success = false;
             try
             {
@@ -409,7 +448,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
                 if (!success)
                     await InitAsync(); // back to old value (restore defaults)
             }
@@ -422,13 +461,7 @@ namespace RotatingTable.Xamarin.ViewModels
             if (newDelay == oldDelay)
                 return;
 
-            if (_isBusy)
-            {
-                await InitAsync(); // back to old value (restore defaults)
-                return;
-            }
-
-            _isBusy = true;
+            await _semaphore.WaitAsync();
             bool success = false;
             try
             {
@@ -444,7 +477,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
             finally
             {
-                _isBusy = false;
+                _semaphore.Release();
                 if (!success)
                     await InitAsync(); // back to old value (restore defaults)
             }

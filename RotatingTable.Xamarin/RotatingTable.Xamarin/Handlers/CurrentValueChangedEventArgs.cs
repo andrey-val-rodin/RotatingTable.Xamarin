@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RotatingTable.Xamarin.ViewModels
+namespace RotatingTable.Xamarin.Handlers
 {
     public class CurrentValueChangedEventArgs : EventArgs
     {

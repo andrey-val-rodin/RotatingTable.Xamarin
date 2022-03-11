@@ -14,6 +14,7 @@ using System.Timers;
 using System.Threading.Tasks;
 using Xamarin.Essentials;
 using System.Threading;
+using RotatingTable.Xamarin.Handlers;
 
 namespace RotatingTable.Xamarin.Views
 {
@@ -35,6 +36,7 @@ namespace RotatingTable.Xamarin.Views
             Model.CurrentPosChanged += OnCurrentPosChanged;
             
             Model.Stop += OnStop;
+            Model.WaitingTimeout += OnWaitingTimeout;
             Adapter.DeviceConnectionLost += Adapter_DeviceConnectionLost;
 
             Model.Service.Timeout += Service_Timeout;
@@ -93,6 +95,17 @@ namespace RotatingTable.Xamarin.Views
         private void OnStop(object sender, EventArgs args)
         {
             _selector.Clear();
+        }
+        
+        private void OnWaitingTimeout(object sender, EventArgs args)
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Model.Service.DisconnectAsync();
+                Model.IsRunning = false;
+                Model.IsConnected = false;
+                await ConnectAsync();
+            });
         }
 
         private void Adapter_DeviceConnectionLost(object sender, DeviceErrorEventArgs e)

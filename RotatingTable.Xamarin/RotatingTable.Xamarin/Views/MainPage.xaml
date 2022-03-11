@@ -107,7 +107,7 @@
                             DragCompletedCommand="{Binding ChangeDelayCommand}"/>
                 </StackLayout>
                 
-                <Button Text="Стоп"
+                <Button Text="{Binding StopButtonText}"
                         IsVisible="{Binding IsRunning}"
                         CornerRadius="8"
                         BackgroundColor="Red"

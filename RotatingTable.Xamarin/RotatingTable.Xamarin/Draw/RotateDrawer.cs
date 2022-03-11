@@ -52,9 +52,6 @@ namespace RotatingTable.Xamarin.Draw
                 return false;
 
             var service = DependencyService.Resolve<IBluetoothService>();
-            if (!await service.RunFreeMovementAsync())
-                return false;
-
             if (!await service.RotateAsync(Angle, (s, a) => OnDataReseived(a.Text)))
                 return false;
 

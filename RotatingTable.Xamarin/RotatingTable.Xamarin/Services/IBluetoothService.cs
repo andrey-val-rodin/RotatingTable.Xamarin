@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RotatingTable.Xamarin.Handlers;
+using System;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -9,7 +10,6 @@ namespace RotatingTable.Xamarin.Services
         event ElapsedEventHandler Timeout;
 
         bool IsConnected { get; }
-        bool IsRunning { get; }
 
         Task<bool> ConnectAsync<T>(T deviceOrId);
         Task DisconnectAsync();
@@ -27,5 +27,8 @@ namespace RotatingTable.Xamarin.Services
         Task<bool> SetExposureAsync(int exposure);
         Task<bool> SetStepsAsync(int steps);
         Task<bool> StopAsync();
+        Task<bool> SoftStopAsync();
+        void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout);
+        void CancelWaitingForStop();
     }
 }

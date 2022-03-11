@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RotatingTable.Xamarin.Services
+namespace RotatingTable.Xamarin.Handlers
 {
     public class DeviceInputEventArgs : EventArgs
     {
