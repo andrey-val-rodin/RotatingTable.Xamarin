@@ -1,20 +1,19 @@
-﻿using RotatingTable.Xamarin.Draw;
+﻿using Acr.UserDialogs;
+using Plugin.BLE;
+using Plugin.BLE.Abstractions.EventArgs;
+using RotatingTable.Xamarin.Draw;
+using RotatingTable.Xamarin.Handlers;
 using RotatingTable.Xamarin.Models;
+using RotatingTable.Xamarin.TouchTracking;
 using RotatingTable.Xamarin.ViewModels;
 using SkiaSharp.Views.Forms;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Timers;
+using Xamarin.Essentials;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
-using RotatingTable.Xamarin.TouchTracking;
-using Plugin.BLE;
-using Plugin.BLE.Abstractions.Contracts;
-using Plugin.BLE.Abstractions.EventArgs;
-using Acr.UserDialogs;
-using System.Timers;
-using System.Threading.Tasks;
-using Xamarin.Essentials;
-using System.Threading;
-using RotatingTable.Xamarin.Handlers;
 
 namespace RotatingTable.Xamarin.Views
 {
@@ -31,25 +30,20 @@ namespace RotatingTable.Xamarin.Views
 
             _userDialogs = UserDialogs.Instance;
             _selector = new(canvasView, Model);
-            
+
             Model.CurrentStepChanged += OnCurrentStepChanged;
             Model.CurrentPosChanged += OnCurrentPosChanged;
-            
+
             Model.Stop += OnStop;
             Model.WaitingTimeout += OnWaitingTimeout;
-            Adapter.DeviceConnectionLost += Adapter_DeviceConnectionLost;
+            CrossBluetoothLE.Current.Adapter.DeviceConnectionLost += DeviceConnectionLost;
 
             Model.Service.Timeout += Service_Timeout;
         }
 
-        private IAdapter Adapter => CrossBluetoothLE.Current.Adapter;
-
         public MainModel Model
         {
-            get
-            {
-                return BindingContext as MainModel;
-            }
+            get => BindingContext as MainModel;
         }
 
         protected override async void OnAppearing()
@@ -61,7 +55,7 @@ namespace RotatingTable.Xamarin.Views
         {
             if (!Model.Service.IsConnected)
             {
-                var id = await Model.ConfigService.GetDeviceIdAsync();
+                var id = await Model.Config.GetDeviceIdAsync();
                 if (id != Guid.Empty)
                     await Model.Service.ConnectAsync(id);
             }
@@ -96,7 +90,7 @@ namespace RotatingTable.Xamarin.Views
         {
             _selector.Clear();
         }
-        
+
         private void OnWaitingTimeout(object sender, EventArgs args)
         {
             MainThread.BeginInvokeOnMainThread(async () =>
@@ -108,7 +102,7 @@ namespace RotatingTable.Xamarin.Views
             });
         }
 
-        private void Adapter_DeviceConnectionLost(object sender, DeviceErrorEventArgs e)
+        private void DeviceConnectionLost(object sender, DeviceErrorEventArgs e)
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
@@ -164,8 +158,6 @@ namespace RotatingTable.Xamarin.Views
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
                         Model.IsDecreasingPWM = false;
-//                        _tokenSource?.Dispose();
-//                        _tokenSource = null;
                     });
                 }
             });
@@ -210,8 +202,6 @@ namespace RotatingTable.Xamarin.Views
                     await MainThread.InvokeOnMainThreadAsync(() =>
                     {
                         Model.IsIncreasingPWM = false;
-//                        _tokenSource?.Dispose();
-//                        _tokenSource = null;
                     });
                 }
             });

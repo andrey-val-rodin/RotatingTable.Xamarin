@@ -15,9 +15,6 @@ namespace RotatingTable.Xamarin.ViewModels
         public event StopEventHandler Stop;
         public event WaitingTimeoutHandler WaitingTimeout;
 
-        public static readonly int[] StepValues =
-            { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
-
         private bool _isConnected;
         private bool _isRunning;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
@@ -55,7 +52,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public IBluetoothService Service { get => DependencyService.Resolve<IBluetoothService>(); }
 
-        public IConfigService ConfigService { get => DependencyService.Resolve<IConfigService>(); }
+        public IConfig Config { get => DependencyService.Resolve<IConfig>(); }
 
         public bool IsConnected
         {
@@ -68,7 +65,7 @@ namespace RotatingTable.Xamarin.ViewModels
             get => _isRunning;
             set
             {
-                if (SetProperty(ref _isRunning, value)) 
+                if (SetProperty(ref _isRunning, value))
                 {
                     OnPropertyChanged("IsReady");
                     OnPropertyChanged(nameof(ShowPWMChanging));
@@ -127,7 +124,7 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             get
             {
-                return StepValues[StepsIndex];
+                return ConfigValidator.StepValues[StepsIndex];
             }
         }
 
@@ -236,12 +233,12 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             IsConnected = Service.IsConnected;
 
-            var steps = await ConfigService.GetStepsAsync();
-            var acceleration = await ConfigService.GetAccelerationAsync();
-            var delay = await ConfigService.GetDelayAsync();
-            var exposure = await ConfigService.GetExposureAsync();
+            var steps = await Config.GetStepsAsync();
+            var acceleration = await Config.GetAccelerationAsync();
+            var delay = await Config.GetDelayAsync();
+            var exposure = await Config.GetExposureAsync();
 
-            StepsIndex = Array.FindIndex(MainModel.StepValues, e => e == steps);
+            StepsIndex = Array.FindIndex(ConfigValidator.StepValues, e => e == steps);
             Acceleration = acceleration;
             Exposure = exposure / 100;
             Delay = delay / 100;
@@ -369,8 +366,8 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeStepsAsync()
         {
-            var oldSteps = await ConfigService.GetStepsAsync();
-            var newSteps = StepValues[StepsIndex];
+            var oldSteps = await Config.GetStepsAsync();
+            var newSteps = ConfigValidator.StepValues[StepsIndex];
             if (newSteps == oldSteps)
                 return;
 
@@ -384,7 +381,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (await Service.SetStepsAsync(newSteps))
                 {
                     // Store in persistent memory
-                    await ConfigService.SetStepsAsync(newSteps);
+                    await Config.SetStepsAsync(newSteps);
                     success = true;
                 }
             }
@@ -398,7 +395,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeAccelerationAsync()
         {
-            var oldAcceleration = await ConfigService.GetAccelerationAsync();
+            var oldAcceleration = await Config.GetAccelerationAsync();
             var newAcceleration = Acceleration;
             if (newAcceleration == oldAcceleration)
                 return;
@@ -413,7 +410,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (await Service.SetAccelerationAsync(newAcceleration))
                 {
                     // Store in persistent memory
-                    await ConfigService.SetAccelerationAsync(newAcceleration);
+                    await Config.SetAccelerationAsync(newAcceleration);
                     success = true;
                 }
             }
@@ -427,7 +424,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeExposureAsync()
         {
-            var oldExposure = await ConfigService.GetExposureAsync();
+            var oldExposure = await Config.GetExposureAsync();
             var newExposure = Exposure * 100;
             if (newExposure == oldExposure)
                 return;
@@ -442,7 +439,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (await Service.SetExposureAsync(newExposure))
                 {
                     // Store in persistent memory
-                    await ConfigService.SetExposureAsync(newExposure);
+                    await Config.SetExposureAsync(newExposure);
                     success = true;
                 }
             }
@@ -456,7 +453,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task ChangeDelayAsync()
         {
-            var oldDelay = await ConfigService.GetDelayAsync();
+            var oldDelay = await Config.GetDelayAsync();
             var newDelay = Delay * 100;
             if (newDelay == oldDelay)
                 return;
@@ -471,7 +468,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (await Service.SetDelayAsync(newDelay))
                 {
                     // Store in persistent memory
-                    await ConfigService.SetDelayAsync(newDelay);
+                    await Config.SetDelayAsync(newDelay);
                     success = true;
                 }
             }

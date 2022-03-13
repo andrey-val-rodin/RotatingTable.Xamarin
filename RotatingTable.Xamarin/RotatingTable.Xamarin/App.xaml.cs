@@ -1,4 +1,5 @@
 ﻿using Acr.UserDialogs;
+using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using Xamarin.Forms;
 
@@ -11,7 +12,7 @@ namespace RotatingTable.Xamarin
             InitializeComponent();
             MainPage = new AppShell();
             DependencyService.RegisterSingleton<IBluetoothService>(new BluetoothService(UserDialogs.Instance));
-            DependencyService.RegisterSingleton<IConfigService>(new ConfigService());
+            DependencyService.RegisterSingleton<IConfig>(new Config());
         }
 
         protected override void OnStart()

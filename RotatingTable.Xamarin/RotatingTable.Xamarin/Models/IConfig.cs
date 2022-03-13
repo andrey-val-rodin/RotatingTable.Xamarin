@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace RotatingTable.Xamarin.Services
+namespace RotatingTable.Xamarin.Models
 {
-    public interface IConfigService
+    public interface IConfig
     {
         Task<Guid> GetDeviceIdAsync();
         Task SetDeviceIdAsync(Guid id);

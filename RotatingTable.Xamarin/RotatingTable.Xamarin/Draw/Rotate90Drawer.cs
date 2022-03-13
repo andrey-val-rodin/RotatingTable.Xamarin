@@ -28,7 +28,6 @@ namespace RotatingTable.Xamarin.Draw
                 else
                     angle = _startQuadrant * 90 + 90 + _offset;
 
-//                System.Diagnostics.Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  StartAngle: {angle}");
                 return angle;
             }
             set => throw new NotImplementedException();
@@ -45,9 +44,8 @@ namespace RotatingTable.Xamarin.Draw
                 if (IsClockwise)
                     angle = _endQuadrant * 90 + 90;
                 else
-                    angle = _startQuadrant == 0 && _endQuadrant == 3 ? - 90 : _endQuadrant * 90;
+                    angle = _startQuadrant == 0 && _endQuadrant == 3 ? -90 : _endQuadrant * 90;
 
-//                System.Diagnostics.Debug.WriteLine($"_startQuadrant: {_startQuadrant} _endQuadrant: {_endQuadrant}  EndAngle: {angle}");
                 return angle;
             }
             set => throw new NotImplementedException();

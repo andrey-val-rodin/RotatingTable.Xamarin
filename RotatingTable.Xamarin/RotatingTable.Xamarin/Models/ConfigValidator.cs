@@ -1,5 +1,4 @@
-﻿using RotatingTable.Xamarin.ViewModels;
-using System;
+﻿using System;
 
 namespace RotatingTable.Xamarin.Models
 {
@@ -11,6 +10,9 @@ namespace RotatingTable.Xamarin.Models
     /// </summary>
     public static class ConfigValidator
     {
+        public static readonly int[] StepValues =
+            { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
+
         public const int DefaultStepsValue = 24;
         public const int DefaultAccelerationValue = 7;
         public const int DefaultDelayValue = 0;
@@ -18,7 +20,7 @@ namespace RotatingTable.Xamarin.Models
 
         public static bool IsStepsValid(int value)
         {
-            return Array.Exists(MainModel.StepValues, e => e == value);
+            return Array.Exists(StepValues, e => e == value);
         }
 
         public static int ValidateSteps(int value)

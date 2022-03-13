@@ -1,14 +1,11 @@
-﻿using System;
+﻿using CoreGraphics;
+using Foundation;
+using RotatingTable.Xamarin.TouchTracking;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Xamarin.Forms;
-
-using CoreGraphics;
-using Foundation;
 using UIKit;
-
-using RotatingTable.Xamarin.TouchTracking;
+using Xamarin.Forms;
 
 namespace TouchTracking.iOS
 {

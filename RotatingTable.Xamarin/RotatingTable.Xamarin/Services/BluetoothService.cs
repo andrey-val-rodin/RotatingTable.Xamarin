@@ -98,7 +98,7 @@ namespace RotatingTable.Xamarin.Services
                         return false;
 
                     // Save config
-                    var configService = DependencyService.Resolve<IConfigService>();
+                    var configService = DependencyService.Resolve<IConfig>();
                     if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
                         !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
                         !await SetDelayAsync(await configService.GetDelayAsync()) ||

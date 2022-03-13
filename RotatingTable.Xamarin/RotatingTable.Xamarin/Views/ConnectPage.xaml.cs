@@ -1,6 +1,6 @@
-﻿using RotatingTable.Xamarin.Services;
+﻿using RotatingTable.Xamarin.Models;
+using RotatingTable.Xamarin.Services;
 using RotatingTable.Xamarin.ViewModels;
-using System.Linq;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
@@ -16,7 +16,7 @@ namespace RotatingTable.Xamarin.Views
 
         protected override async void OnAppearing()
         {
-            var configService = DependencyService.Resolve<IConfigService>();
+            var configService = DependencyService.Resolve<IConfig>();
             var id = await configService.GetDeviceIdAsync();
             var connectModel = BindingContext as ConnectModel;
             connectModel.DeviceName = id.ToString().Replace("00000000-0000-0000-0000-", "");
@@ -34,7 +34,7 @@ namespace RotatingTable.Xamarin.Views
                 ((ListView)sender).SelectedItem = null;
             else
             {
-                var configService = DependencyService.Resolve<IConfigService>();
+                var configService = DependencyService.Resolve<IConfig>();
                 await configService.SetDeviceIdAsync(item.Device.Id);
                 await Shell.Current.GoToAsync("//MainPage");
             }

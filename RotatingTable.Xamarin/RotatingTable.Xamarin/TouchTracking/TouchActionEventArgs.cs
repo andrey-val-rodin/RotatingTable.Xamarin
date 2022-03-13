@@ -1,5 +1,4 @@
-﻿using RotatingTable.Xamarin.TouchTracking;
-using System;
+﻿using System;
 using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.TouchTracking

@@ -1,7 +1,7 @@
 ﻿using Plugin.BLE.Abstractions.Contracts;
 using System;
 
-namespace RotatingTable.Xamarin.ViewModels
+namespace RotatingTable.Xamarin.Models
 {
     public class DeviceItem
     {

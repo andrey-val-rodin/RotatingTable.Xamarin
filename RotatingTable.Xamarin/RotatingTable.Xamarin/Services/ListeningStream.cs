@@ -34,7 +34,7 @@ namespace RotatingTable.Xamarin.Services
             System.Diagnostics.Debug.WriteLine("Stream: " +
                 UnsafeAsciiBytesToString(bytes).Replace(BluetoothService.Terminator, '|'));
 
-            lock(_internalStream)
+            lock (_internalStream)
             {
 
                 _internalStream.Write(bytes, 0, bytes.Length);

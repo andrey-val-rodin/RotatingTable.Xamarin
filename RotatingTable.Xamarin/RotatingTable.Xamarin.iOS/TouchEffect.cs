@@ -1,9 +1,7 @@
 ﻿using System.Linq;
-
+using UIKit;
 using Xamarin.Forms;
 using Xamarin.Forms.Platform.iOS;
-
-using UIKit;
 
 [assembly: ResolutionGroupName("XamarinDocs")]
 [assembly: ExportEffect(typeof(TouchTracking.iOS.TouchEffect), "TouchEffect")]

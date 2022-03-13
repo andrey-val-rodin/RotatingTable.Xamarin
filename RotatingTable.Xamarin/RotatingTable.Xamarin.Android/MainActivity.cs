@@ -1,10 +1,10 @@
-﻿using Android.App;
-using Android.Content.PM;
-using Android.Runtime;
-using Android.OS;
-using Xamarin.Essentials;
+﻿using Acr.UserDialogs;
 using Android;
-using Acr.UserDialogs;
+using Android.App;
+using Android.Content.PM;
+using Android.OS;
+using Android.Runtime;
+using Xamarin.Essentials;
 
 namespace RotatingTable.Xamarin.Droid
 {

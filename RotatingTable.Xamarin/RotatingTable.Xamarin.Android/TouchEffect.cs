@@ -1,13 +1,10 @@
-﻿using System;
+﻿using Android.Views;
+using RotatingTable.Xamarin.TouchTracking;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Xamarin.Forms;
 using Xamarin.Forms.Platform.Android;
-
-using Android.Views;
-
-using RotatingTable.Xamarin.TouchTracking;
 
 [assembly: ResolutionGroupName("XamarinDocs")]
 [assembly: ExportEffect(typeof(TouchTracking.Droid.TouchEffect), "TouchEffect")]
