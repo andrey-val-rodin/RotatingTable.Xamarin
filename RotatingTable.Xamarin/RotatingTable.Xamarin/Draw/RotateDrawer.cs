@@ -12,6 +12,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public abstract class RotateDrawer : BaseDrawer
     {
+        protected bool _isBusy = false;
         protected bool _isDragging = false;
         protected int _offset = 0;
 
@@ -57,6 +58,7 @@ namespace RotatingTable.Xamarin.Draw
 
             Model.IsRunning = true;
             Model.CurrentPos = 0;
+            _isBusy = true;
             return true;
         }
 
@@ -88,6 +90,7 @@ namespace RotatingTable.Xamarin.Draw
 
         public override void Clear()
         {
+            _isBusy = false;
             _isDragging = false;
             _offset = 0;
         }

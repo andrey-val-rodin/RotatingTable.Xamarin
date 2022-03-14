@@ -66,6 +66,9 @@ namespace RotatingTable.Xamarin.Draw
 
         public override async void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
+            if (_isBusy)
+                return;
+
             var pt = Transform(args.Location);
             switch (args.Type)
             {
