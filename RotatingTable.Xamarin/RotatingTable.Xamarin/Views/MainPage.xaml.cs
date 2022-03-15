@@ -38,7 +38,7 @@ namespace RotatingTable.Xamarin.Views
             Model.WaitingTimeout += OnWaitingTimeout;
             CrossBluetoothLE.Current.Adapter.DeviceConnectionLost += DeviceConnectionLost;
 
-            Model.Service.Timeout += Service_Timeout;
+            Model.Service.Timeout += ServiceTimeout;
         }
 
         public MainViewModel Model
@@ -98,6 +98,7 @@ namespace RotatingTable.Xamarin.Views
                 await Model.Service.DisconnectAsync();
                 Model.IsRunning = false;
                 Model.IsConnected = false;
+                _selector.Clear();
                 await ConnectAsync();
             });
         }
@@ -107,12 +108,13 @@ namespace RotatingTable.Xamarin.Views
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 await _userDialogs.AlertAsync("Соединение со столом разорвано");
+                _selector.Clear();
                 await Shell.Current.GoToAsync("//ConnectPage");
             });
         }
 
 
-        private void Service_Timeout(object sender, ElapsedEventArgs args)
+        private void ServiceTimeout(object sender, ElapsedEventArgs args)
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
@@ -120,6 +122,7 @@ namespace RotatingTable.Xamarin.Views
                 await Model.Service.DisconnectAsync();
                 Model.IsRunning = false;
                 Model.IsConnected = false;
+                _selector.Clear();
                 await ConnectAsync();
             });
         }
