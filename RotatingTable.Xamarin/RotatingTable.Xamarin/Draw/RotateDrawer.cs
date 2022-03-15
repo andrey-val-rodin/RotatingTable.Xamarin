@@ -16,7 +16,7 @@ namespace RotatingTable.Xamarin.Draw
         protected bool _isDragging = false;
         protected int _offset = 0;
 
-        public RotateDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public RotateDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

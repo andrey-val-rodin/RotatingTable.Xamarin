@@ -18,7 +18,7 @@ namespace RotatingTable.Xamarin.Views
         {
             var configService = DependencyService.Resolve<IConfig>();
             var id = await configService.GetDeviceIdAsync();
-            var connectModel = BindingContext as ConnectModel;
+            var connectModel = BindingContext as ConnectViewModel;
             connectModel.DeviceName = id.ToString().Replace("00000000-0000-0000-0000-", "");
             await connectModel.ScanAsync();
         }

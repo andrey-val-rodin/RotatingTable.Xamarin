@@ -41,9 +41,9 @@ namespace RotatingTable.Xamarin.Views
             Model.Service.Timeout += Service_Timeout;
         }
 
-        public MainModel Model
+        public MainViewModel Model
         {
-            get => BindingContext as MainModel;
+            get => BindingContext as MainViewModel;
         }
 
         protected override async void OnAppearing()

@@ -19,13 +19,13 @@ namespace RotatingTable.Xamarin.Draw
         };
 
         protected SKCanvasView CanvasView { get; }
-        protected MainModel Model { get; }
+        protected MainViewModel Model { get; }
         protected SKCanvas Canvas { get; private set; }
         protected int Radius { get; private set; }
         protected SKPoint Center { get; private set; }
         protected SKRect Rect { get; private set; }
 
-        public BaseDrawer(SKCanvasView canvasView, MainModel model)
+        public BaseDrawer(SKCanvasView canvasView, MainViewModel model)
         {
             CanvasView = canvasView;
             Model = model;

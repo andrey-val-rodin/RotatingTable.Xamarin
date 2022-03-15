@@ -12,7 +12,7 @@ namespace RotatingTable.Xamarin.Draw
         private int _endQuadrant = -1;
         private bool _isClockWise;
 
-        public Rotate90Drawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public Rotate90Drawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

@@ -6,7 +6,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class NonStopDrawer : ChangablePWMDriver
     {
-        public NonStopDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public NonStopDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

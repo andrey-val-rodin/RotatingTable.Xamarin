@@ -6,7 +6,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class ManualDrawer : BaseDrawer
     {
-        public ManualDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public ManualDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

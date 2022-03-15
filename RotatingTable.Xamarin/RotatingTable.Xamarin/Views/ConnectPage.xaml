@@ -5,7 +5,7 @@
              xmlns:models="clr-namespace:RotatingTable.Xamarin.Models"
              x:Class="RotatingTable.Xamarin.Views.ConnectPage">
     <ContentPage.BindingContext>
-        <viewmodels:ConnectModel/>
+        <viewmodels:ConnectViewModel/>
     </ContentPage.BindingContext>
     <ContentPage.Content>
         <StackLayout Margin="12">

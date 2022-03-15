@@ -10,7 +10,7 @@ using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.ViewModels
 {
-    public class ConnectModel : NotifyPropertyChangedImpl
+    public class ConnectViewModel : NotifyPropertyChangedImpl
     {
         private bool _isBusy = false;
         private bool _isBluetoothEnabled;
@@ -18,7 +18,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private string _deviceName;
         private CancellationTokenSource _cancellationTokenSource;
 
-        public ConnectModel()
+        public ConnectViewModel()
         {
             _isBluetoothEnabled = BluetoothLE.IsOn;
             _isBluetoothDisabled = !_isBluetoothEnabled;

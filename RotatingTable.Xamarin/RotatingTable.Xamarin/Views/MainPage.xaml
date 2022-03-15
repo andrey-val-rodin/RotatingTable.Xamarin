@@ -4,10 +4,10 @@
              xmlns:viewmodels="clr-namespace:RotatingTable.Xamarin.ViewModels"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Forms;assembly=SkiaSharp.Views.Forms"
              xmlns:tt="clr-namespace:RotatingTable.Xamarin.TouchTracking"
-             x:DataType="viewmodels:MainModel"
+             x:DataType="viewmodels:MainViewModel"
              x:Class="RotatingTable.Xamarin.Views.MainPage">
     <ContentPage.BindingContext>
-        <viewmodels:MainModel/>
+        <viewmodels:MainViewModel/>
     </ContentPage.BindingContext>
     <ContentPage.Content>
         <StackLayout>

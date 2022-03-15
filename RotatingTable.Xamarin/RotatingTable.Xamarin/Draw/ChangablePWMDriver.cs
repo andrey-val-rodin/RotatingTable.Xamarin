@@ -7,7 +7,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class ChangablePWMDriver : BaseDrawer
     {
-        public ChangablePWMDriver(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public ChangablePWMDriver(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

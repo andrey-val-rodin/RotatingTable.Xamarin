@@ -9,7 +9,7 @@ namespace RotatingTable.Xamarin.Draw
     {
         private readonly BaseDrawer[] _drawers = new BaseDrawer[(int)Mode.Last + 1];
 
-        public Selector(SKCanvasView canvasView, MainModel model)
+        public Selector(SKCanvasView canvasView, MainViewModel model)
         {
             _drawers[(int)Mode.Auto] = new AutoDrawer(canvasView, model);
             _drawers[(int)Mode.Manual] = new ManualDrawer(canvasView, model);

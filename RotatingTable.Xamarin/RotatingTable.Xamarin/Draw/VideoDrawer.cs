@@ -5,7 +5,7 @@ namespace RotatingTable.Xamarin.Draw
 {
     public class VideoDrawer : ChangablePWMDriver
     {
-        public VideoDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public VideoDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 

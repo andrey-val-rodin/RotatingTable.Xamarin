@@ -8,7 +8,7 @@ using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.ViewModels
 {
-    public class MainModel : NotifyPropertyChangedImpl
+    public class MainViewModel : NotifyPropertyChangedImpl
     {
         public event CurrentStepChangedEventHandler CurrentStepChanged;
         public event CurrentPosChangedEventHandler CurrentPosChanged;
@@ -29,7 +29,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private bool _isSoftStopping;
         private bool _performingManualStep;
 
-        public MainModel()
+        public MainViewModel()
         {
             StopButtonText = "Стоп";
             RunCommand = new Command(async () => await RunAsync());

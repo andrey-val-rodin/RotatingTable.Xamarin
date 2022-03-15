@@ -9,7 +9,7 @@ namespace RotatingTable.Xamarin.Draw
     {
         private int _startAngle;
 
-        public FreeMovementDrawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
+        public FreeMovementDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
         }
 
