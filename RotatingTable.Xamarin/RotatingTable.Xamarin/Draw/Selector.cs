@@ -12,6 +12,7 @@ namespace RotatingTable.Xamarin.Draw
         public Selector(SKCanvasView canvasView, MainModel model)
         {
             _drawers[(int)Mode.Auto] = new AutoDrawer(canvasView, model);
+            _drawers[(int)Mode.Manual] = new ManualDrawer(canvasView, model);
             _drawers[(int)Mode.Nonstop] = new NonStopDrawer(canvasView, model);
             _drawers[(int)Mode.Rotate90] = new Rotate90Drawer(canvasView, model);
             _drawers[(int)Mode.FreeMovement] = new FreeMovementDrawer(canvasView, model);
@@ -24,14 +25,14 @@ namespace RotatingTable.Xamarin.Draw
             {
                 case Mode.Auto:
                     return _drawers[(int)Mode.Auto];
-                case Mode.Rotate90:
-                    return _drawers[(int)Mode.Rotate90];
-                case Mode.FreeMovement:
-                    return _drawers[(int)Mode.FreeMovement];
                 case Mode.Manual:
                     return _drawers[(int)Mode.Manual];
                 case Mode.Nonstop:
                     return _drawers[(int)Mode.Nonstop];
+                case Mode.Rotate90:
+                    return _drawers[(int)Mode.Rotate90];
+                case Mode.FreeMovement:
+                    return _drawers[(int)Mode.FreeMovement];
                 case Mode.Video:
                     return _drawers[(int)Mode.Video];
                 default:

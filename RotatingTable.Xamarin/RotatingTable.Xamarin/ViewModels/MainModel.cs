@@ -27,12 +27,15 @@ namespace RotatingTable.Xamarin.ViewModels
         private int _delay;
         private string _stopButtonText;
         private bool _isSoftStopping;
+        private bool _performingManualStep;
 
         public MainModel()
         {
             StopButtonText = "Стоп";
             RunCommand = new Command(async () => await RunAsync());
             StopCommand = new Command(async () => await StopAsync());
+            NextCommand = new Command(async () => await NextAsync());
+            PhotoCommand = new Command(async () => await PhotoAsync());
             ChangeStepsCommand = new Command(async () => await ChangeStepsAsync());
             ChangeAccelerationCommand = new Command(async () => await ChangeAccelerationAsync());
             ChangeExposureCommand = new Command(async () => await ChangeExposureAsync());
@@ -69,6 +72,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 {
                     OnPropertyChanged("IsReady");
                     OnPropertyChanged(nameof(ShowPWMChanging));
+                    OnPropertyChanged(nameof(ShowManualButtons));
                     OnPropertyChanged(nameof(ShowSteps));
                     OnPropertyChanged(nameof(ShowAcceleration));
                     OnPropertyChanged(nameof(ShowExposure));
@@ -176,7 +180,14 @@ namespace RotatingTable.Xamarin.ViewModels
         public bool ShowPWMChanging
         {
             get => IsRunning &&
-                (CurrentMode == (int)Mode.Video || CurrentMode == (int)Mode.Nonstop);
+                (CurrentMode == (int)Mode.Video ||
+                CurrentMode == (int)Mode.Nonstop);
+        }
+
+        public bool ShowManualButtons
+        {
+            get => IsRunning &&
+                CurrentMode == (int)Mode.Manual;
         }
 
         public bool ShowSteps
@@ -187,14 +198,14 @@ namespace RotatingTable.Xamarin.ViewModels
         public bool ShowAcceleration
         {
             get => !IsRunning ||
-                (CurrentMode == (int)Mode.Auto || CurrentMode == (int)Mode.Manual);
+                CurrentMode == (int)Mode.Auto ||
+                CurrentMode == (int)Mode.Manual;
         }
 
         public bool ShowExposure
         {
             get => !IsRunning ||
-                CurrentMode == (int)Mode.Auto ||
-                CurrentMode == (int)Mode.Manual;
+                CurrentMode == (int)Mode.Auto;
         }
 
         public bool ShowDelay
@@ -224,6 +235,8 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public Command RunCommand { get; }
         public Command StopCommand { get; }
+        public Command NextCommand { get; }
+        public Command PhotoCommand { get; }
         public Command ChangeStepsCommand { get; }
         public Command ChangeAccelerationCommand { get; }
         public Command ChangeExposureCommand { get; }
@@ -256,8 +269,9 @@ namespace RotatingTable.Xamarin.ViewModels
                         break;
 
                     case (int)Mode.Manual:
-                        await Application.Current.MainPage.DisplayAlert("",//TODO
-                            "Не поддерживается пока", "OK");
+                        CurrentStep = 1;
+                        _performingManualStep = false;
+                        IsRunning = await Service.RunManualAsync();
                         break;
 
                     case (int)Mode.Nonstop:
@@ -362,6 +376,51 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 _semaphore.Release();
             }
+        }
+
+        private async Task NextAsync()
+        {
+            if (_performingManualStep)
+                return;
+
+            if (CurrentMode != (int)Mode.Manual)
+                throw new InvalidOperationException("Invalid mode");
+
+            if (await Service.NextAsync((s, a) => OnManualStepDataReseived(a.Text)))
+            {
+                IsRunning = true;
+                _performingManualStep = true;
+            }
+        }
+
+        public void OnManualStepDataReseived(string text)
+        {
+            if (text.StartsWith(Commands.Step))
+            {
+                CurrentStep = int.TryParse(text.Substring(Commands.Step.Length), out int i) ? i : 0;
+                CurrentPos = 0;
+                _performingManualStep = false;
+            }
+            else if (text.StartsWith(Commands.Position))
+            {
+                CurrentPos = int.TryParse(text.Substring(Commands.Position.Length), out int i) ? i : 0;
+            }
+            else if (text == Commands.End)
+            {
+                // finished
+                IsRunning = false;
+                _performingManualStep = false;
+                CurrentStep = 0;
+                CurrentPos = 0;
+            }
+        }
+
+        private async Task PhotoAsync()
+        {
+            if (CurrentMode != (int)Mode.Manual)
+                throw new InvalidOperationException("Invalid mode");
+
+            await Service.PhotoAsync();
         }
 
         private async Task ChangeStepsAsync()

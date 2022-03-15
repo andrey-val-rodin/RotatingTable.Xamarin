@@ -30,6 +30,7 @@ namespace RotatingTable.Xamarin.Services
         private string _response;
         private ListeningStream _stream;
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
+        private EventHandler<DeviceInputEventArgs> _listeningHandler;
         private StopEventHandler _waitingEventHandler;
         private readonly List<string> _acceptedTokens = new();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
@@ -385,20 +386,25 @@ namespace RotatingTable.Xamarin.Services
                 _response = args.Text;
         }
 
-        private void BeginListening(EventHandler<DeviceInputEventArgs> handler)
+        private void BeginListening(
+            EventHandler<DeviceInputEventArgs> handler,
+            EventHandler<DeviceInputEventArgs> listeningHandler)
         {
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
             _streamTokenHandler = handler;
-            _stream.TokenUpdated += ListeningHandler;
+            _listeningHandler = listeningHandler;
+            _stream.TokenUpdated += _streamTokenHandler;
+            _stream.TokenUpdated += _listeningHandler;
             _timer.Start();
             IsListening = true;
         }
 
         private void EndListening()
         {
-            _stream.TokenUpdated -= ListeningHandler;
+            _stream.TokenUpdated -= _streamTokenHandler;
+            _stream.TokenUpdated -= _listeningHandler;
             _streamTokenHandler = null;
             _timer.Stop();
             IsListening = false;
@@ -410,7 +416,6 @@ namespace RotatingTable.Xamarin.Services
             _timer.Stop();
             _timer.Start();
 
-            _streamTokenHandler?.Invoke(this, args);
             if (args.Text == Commands.End)
             {
                 // Finishing
@@ -432,7 +437,15 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await RunAsync(Commands.RunAutoMode, eventHandler);
+            return await RunAsync(Commands.RunAutoMode, eventHandler, ListeningHandler);
+        }
+
+        public async Task<bool> RunManualAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.RunManualMode, null, null);
         }
 
         public async Task<bool> RunNonStopAsync(EventHandler<DeviceInputEventArgs> eventHandler)
@@ -440,7 +453,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await RunAsync(Commands.RunNonStopMode, eventHandler);
+            return await RunAsync(Commands.RunNonStopMode, eventHandler, ListeningHandler);
         }
 
         public async Task<bool> RunFreeMovementAsync()
@@ -448,7 +461,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await RunAsync(Commands.RunFreeMovement);
+            return await RunAsync(Commands.RunFreeMovement, null, ListeningHandler);
         }
 
         public async Task<bool> RotateAsync(int angle, EventHandler<DeviceInputEventArgs> eventHandler)
@@ -456,7 +469,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await RunAsync(Commands.FreeMovement + angle, eventHandler);
+            return await RunAsync(Commands.FreeMovement + angle, eventHandler, ListeningHandler);
         }
 
         public async Task<bool> RunVideoAsync(EventHandler<DeviceInputEventArgs> eventHandler)
@@ -464,20 +477,57 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await RunAsync(Commands.RunVideoMode, eventHandler);
+            return await RunAsync(Commands.RunVideoMode, eventHandler, ListeningHandler);
         }
 
         public async Task<bool> IncreasePWMAsync()
         {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
             return await WriteCommandAsync(Commands.IncreasePWM);
         }
 
         public async Task<bool> DecreasePWMAsync()
         {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
             return await WriteCommandAsync(Commands.DecreasePWM);
         }
 
-        private async Task<bool> RunAsync(string command, EventHandler<DeviceInputEventArgs> eventHandler = null)
+        public async Task<bool> PhotoAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await WriteCommandAsync(Commands.Shutter);
+        }
+
+        public async Task<bool> NextAsync(EventHandler<DeviceInputEventArgs> eventHandler)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await RunAsync(Commands.Next, eventHandler, ManualListeningHandler);
+        }
+
+        private void ManualListeningHandler(object sender, DeviceInputEventArgs args)
+        {
+            // Reset timer
+            _timer.Stop();
+            _timer.Start();
+
+            if (args.Text == Commands.End || args.Text.StartsWith(Commands.Step))
+            {
+                // Finishing
+                EndListening();
+            }
+        }
+
+        private async Task<bool> RunAsync(string command,
+            EventHandler<DeviceInputEventArgs> eventHandler,
+            EventHandler<DeviceInputEventArgs> listeningHandler)
         {
             if (IsListening)
                 throw new InvalidOperationException("Listening already");
@@ -487,7 +537,7 @@ namespace RotatingTable.Xamarin.Services
             {
                 if (eventHandler != null)
                 {
-                    BeginListening(eventHandler);
+                    BeginListening(eventHandler, listeningHandler);
                 }
 
                 success = await WriteCommandAsync(command,

@@ -15,7 +15,7 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawMarker();
+            DrawMarker(Model.CurrentPos);
             DrawArrow();
             DrawBorder();
             DrawText(0, 40, Model.CurrentStep.ToString(), 100, SKTextAlign.Center);

@@ -40,6 +40,17 @@
                         HorizontalOptions="FillAndExpand"/>
                 </StackLayout>
 
+                <StackLayout Orientation="Horizontal">
+                    <Button Text="Фото"
+                        IsVisible="{Binding ShowManualButtons}"
+                        Command="{Binding PhotoCommand}"
+                        HorizontalOptions="FillAndExpand"/>
+                    <Button Text="Дальше"
+                        IsVisible="{Binding ShowManualButtons}"
+                        Command="{Binding NextCommand}"
+                        HorizontalOptions="FillAndExpand"/>
+                </StackLayout>
+
                 <Picker Title="Режим"
                         IsEnabled="{Binding IsReady}"
                         ItemsSource="{Binding Modes}"

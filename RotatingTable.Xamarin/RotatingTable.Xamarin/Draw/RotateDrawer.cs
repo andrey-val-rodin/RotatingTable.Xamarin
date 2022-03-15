@@ -71,9 +71,8 @@ namespace RotatingTable.Xamarin.Draw
                 Model.CurrentPos = 0;
                 CanvasView.InvalidateSurface();
                 Clear();
-                return;
             }
-            if (text.StartsWith(Commands.Position))
+            else if (text.StartsWith(Commands.Position))
             {
                 Model.CurrentPos = int.TryParse(text.Substring(4), out int i) ? i : 0;
                 _offset = Model.CurrentPos;
