@@ -10,6 +10,7 @@ namespace RotatingTable.Xamarin.Draw
     {
         private int _startQuadrant = -1;
         private int _endQuadrant = -1;
+        private bool _isClockWise;
 
         public Rotate90Drawer(SKCanvasView canvasView, MainModel model) : base(canvasView, model)
         {
@@ -55,6 +56,8 @@ namespace RotatingTable.Xamarin.Draw
         {
             get
             {
+                if (_startQuadrant == _endQuadrant)
+                    return _isClockWise;
                 if (_startQuadrant == 0 && _endQuadrant == 3)
                     return false;
                 if (_startQuadrant == 3 && _endQuadrant == 0)
@@ -63,6 +66,8 @@ namespace RotatingTable.Xamarin.Draw
                 return _endQuadrant >= _startQuadrant;
             }
         }
+
+        private SKPoint PreviousPoint { get; set; }
 
         public override async void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
@@ -73,6 +78,8 @@ namespace RotatingTable.Xamarin.Draw
             switch (args.Type)
             {
                 case TouchActionType.Pressed:
+                    PreviousPoint = pt;
+                    _isClockWise = true;
                     int quadrant = GetQuadrant(pt);
                     if (quadrant < 0)
                     {
@@ -92,7 +99,19 @@ namespace RotatingTable.Xamarin.Draw
                     if (!IsSibling(_startQuadrant, pt))
                         Clear();
                     else
+                    {
                         _endQuadrant = GetQuadrant(pt);
+                        if (_startQuadrant == _endQuadrant && pt != PreviousPoint)
+                        {
+                            var endAngle = (int)ToAngle(pt);
+                            var startAngle = (int)ToAngle(PreviousPoint);
+                            if (Math.Abs(endAngle - startAngle) > 3)
+                            {
+                                _isClockWise = endAngle > startAngle;
+                                PreviousPoint = pt;
+                            }
+                        }
+                    }
                     CanvasView.InvalidateSurface();
                     break;
 
