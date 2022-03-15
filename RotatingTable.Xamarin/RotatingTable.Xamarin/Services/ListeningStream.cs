@@ -8,8 +8,8 @@ namespace RotatingTable.Xamarin.Services
     {
         public event EventHandler<DeviceInputEventArgs> TokenUpdated;
 
-        private MemoryStream _internalStream = new();
-        private byte[] _buffer = new byte[1024];
+        private readonly MemoryStream _internalStream = new();
+        private readonly byte[] _buffer = new byte[1024];
 
         public long Length
         {

@@ -16,7 +16,7 @@ namespace TouchTracking.iOS
         protected override void OnAttached()
         {
             // Get the iOS UIView corresponding to the Element that the effect is attached to
-            view = Control == null ? Container : Control;
+            view = Control ?? Container;
 
             // Uncomment this line if the UIView does not have touch enabled by default
             //view.UserInteractionEnabled = true;

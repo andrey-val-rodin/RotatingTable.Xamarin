@@ -33,15 +33,14 @@ namespace RotatingTable.Xamarin.Services
         private EventHandler<DeviceInputEventArgs> _listeningHandler;
         private StopEventHandler _waitingEventHandler;
         private readonly List<string> _acceptedTokens = new();
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly System.Timers.Timer _timer;
         private System.Timers.Timer _timer2;
 
         public BluetoothService(IUserDialogs userDialogs)
         {
             _userDialogs = userDialogs;
-            _timer = new System.Timers.Timer(3000);
-            _timer.AutoReset = false;
+            _timer = new System.Timers.Timer(3000) { AutoReset = false };
         }
 
         public event ElapsedEventHandler Timeout
@@ -66,52 +65,51 @@ namespace RotatingTable.Xamarin.Services
             string error = null;
             try
             {
-                using (var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource)))
+                using var progress = _userDialogs.Progress(CreateDialogConfig(tokenSource));
+
+                IDevice device = deviceOrId is IDevice d
+                    ? await ConnectToDeviceAsync(d, tokenSource.Token)
+                    : await ConnectToDeviceAsync((Guid)(object)deviceOrId, tokenSource.Token);
+                if (device == null)
+                    return false;
+
+                // Get service
+                var service = await LoadService(device, tokenSource.Token);
+                if (service == null)
                 {
-                    IDevice device = deviceOrId is IDevice
-                        ? await ConnectToDeviceAsync((IDevice)deviceOrId, tokenSource.Token)
-                        : await ConnectToDeviceAsync((Guid)(object)deviceOrId, tokenSource.Token);
-                    if (device == null)
-                        return false;
-
-                    // Get service
-                    var service = await LoadService(device, tokenSource.Token);
-                    if (service == null)
-                    {
-                        error = $"Сервис {ServiceUuid} не найден";
-                        return false;
-                    }
-
-                    if (!await LoadCharacteristics(service))
-                    {
-                        error = "Характеристика не обнаружена";
-                        return false;
-                    }
-
-                    error = await CheckStatus();
-                    if (!string.IsNullOrEmpty(error) || !IsConnected)
-                    {
-                        IsConnected = false;
-                        return false;
-                    }
-
-                    if (tokenSource.Token.IsCancellationRequested)
-                        return false;
-
-                    // Save config
-                    var configService = DependencyService.Resolve<IConfig>();
-                    if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
-                        !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
-                        !await SetDelayAsync(await configService.GetDelayAsync()) ||
-                        !await SetExposureAsync(await configService.GetExposureAsync()))
-                    {
-                        IsConnected = false;
-                        error = "Не удалось передать столу параметры";
-                        return false;
-                    }
-
-                    return IsConnected;
+                    error = $"Сервис {ServiceUuid} не найден";
+                    return false;
                 }
+
+                if (!await LoadCharacteristics(service))
+                {
+                    error = "Характеристика не обнаружена";
+                    return false;
+                }
+
+                error = await CheckStatus();
+                if (!string.IsNullOrEmpty(error) || !IsConnected)
+                {
+                    IsConnected = false;
+                    return false;
+                }
+
+                if (tokenSource.Token.IsCancellationRequested)
+                    return false;
+
+                // Save config
+                var configService = DependencyService.Resolve<IConfig>();
+                if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
+                    !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
+                    !await SetDelayAsync(await configService.GetDelayAsync()) ||
+                    !await SetExposureAsync(await configService.GetExposureAsync()))
+                {
+                    IsConnected = false;
+                    error = "Не удалось передать столу параметры";
+                    return false;
+                }
+
+                return IsConnected;
             }
             catch (Exception ex)
             {
@@ -390,10 +388,7 @@ namespace RotatingTable.Xamarin.Services
             EventHandler<DeviceInputEventArgs> handler,
             EventHandler<DeviceInputEventArgs> listeningHandler)
         {
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
-
-            _streamTokenHandler = handler;
+            _streamTokenHandler = handler ?? throw new ArgumentNullException(nameof(handler));
             _listeningHandler = listeningHandler;
             _stream.TokenUpdated += _streamTokenHandler;
             _stream.TokenUpdated += _listeningHandler;
@@ -577,8 +572,7 @@ namespace RotatingTable.Xamarin.Services
         public void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout)
         {
             _waitingEventHandler = onStop;
-            _timer2 = new System.Timers.Timer(5000);
-            _timer2.AutoReset = false;
+            _timer2 = new System.Timers.Timer(5000) { AutoReset = false };
             _timer2.Elapsed += async (s, a) =>
             {
                 await _userDialogs.AlertAsync("Превышено время ожидания ответа");

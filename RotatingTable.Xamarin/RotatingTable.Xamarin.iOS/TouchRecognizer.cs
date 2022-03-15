@@ -11,16 +11,13 @@ namespace TouchTracking.iOS
 {
     class TouchRecognizer : UIGestureRecognizer
     {
-        Element element;        // Forms element for firing events
-        UIView view;            // iOS UIView 
-        RotatingTable.Xamarin.TouchTracking.TouchEffect touchEffect;
+        readonly Element element;        // Forms element for firing events
+        readonly UIView view;            // iOS UIView 
+        readonly RotatingTable.Xamarin.TouchTracking.TouchEffect touchEffect;
         bool capture;
 
-        static Dictionary<UIView, TouchRecognizer> viewDictionary =
-            new Dictionary<UIView, TouchRecognizer>();
-
-        static Dictionary<long, TouchRecognizer> idToTouchDictionary =
-            new Dictionary<long, TouchRecognizer>();
+        static readonly Dictionary<UIView, TouchRecognizer> viewDictionary = new();
+        static readonly Dictionary<long, TouchRecognizer> idToTouchDictionary = new();
 
         public TouchRecognizer(Element element, UIView view,
             RotatingTable.Xamarin.TouchTracking.TouchEffect touchEffect)
@@ -160,7 +157,7 @@ namespace TouchTracking.iOS
         {
             // Convert touch location to Xamarin.Forms Point value
             CGPoint cgPoint = touch.LocationInView(recognizer.View);
-            Point xfPoint = new Point(cgPoint.X, cgPoint.Y);
+            var xfPoint = new Point(cgPoint.X, cgPoint.Y);
 
             // Get the method to call for firing events
             Action<Element, TouchActionEventArgs> onTouchAction = recognizer.touchEffect.OnTouchAction;

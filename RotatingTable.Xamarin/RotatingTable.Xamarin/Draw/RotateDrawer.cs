@@ -103,7 +103,7 @@ namespace RotatingTable.Xamarin.Draw
 
         protected double ToAngle(SKPoint pt)
         {
-            SKPoint start = new SKPoint(Radius, 0);
+            var start = new SKPoint(Radius, 0);
             double cos = (pt.X * start.X + pt.Y * start.Y) /
                 (Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y) * Math.Sqrt(start.X * start.X + start.Y * start.Y));
             double radians = Math.Acos(cos);

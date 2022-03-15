@@ -18,18 +18,15 @@ namespace TouchTracking.Droid
         RotatingTable.Xamarin.TouchTracking.TouchEffect libTouchEffect;
         bool capture;
         Func<double, double> fromPixels;
-        int[] twoIntArray = new int[2];
+        readonly int[] twoIntArray = new int[2];
 
-        static Dictionary<Android.Views.View, TouchEffect> viewDictionary =
-            new Dictionary<Android.Views.View, TouchEffect>();
-
-        static Dictionary<int, TouchEffect> idToEffectDictionary =
-            new Dictionary<int, TouchEffect>();
+        static readonly Dictionary<Android.Views.View, TouchEffect> viewDictionary = new();
+        static readonly Dictionary<int, TouchEffect> idToEffectDictionary = new();
 
         protected override void OnAttached()
         {
             // Get the Android View corresponding to the Element that the effect is attached to
-            view = Control == null ? Container : Control;
+            view = Control ?? Container;
 
             // Get access to the TouchEffect class in the .NET Standard library
             RotatingTable.Xamarin.TouchTracking.TouchEffect touchEffect =
@@ -75,7 +72,7 @@ namespace TouchTracking.Droid
 
 
             senderView.GetLocationOnScreen(twoIntArray);
-            Point screenPointerCoords = new Point(twoIntArray[0] + motionEvent.GetX(pointerIndex),
+            var screenPointerCoords = new Point(twoIntArray[0] + motionEvent.GetX(pointerIndex),
                                                   twoIntArray[1] + motionEvent.GetY(pointerIndex));
 
 
@@ -168,8 +165,8 @@ namespace TouchTracking.Droid
                 {
                     continue;
                 }
-                Rectangle viewRect = new Rectangle(twoIntArray[0], twoIntArray[1], view.Width, view.Height);
 
+                var viewRect = new Rectangle(twoIntArray[0], twoIntArray[1], view.Width, view.Height);
                 if (viewRect.Contains(pointerLocation))
                 {
                     touchEffectHit = viewDictionary[view];
@@ -199,7 +196,7 @@ namespace TouchTracking.Droid
             touchEffect.view.GetLocationOnScreen(twoIntArray);
             double x = pointerLocation.X - twoIntArray[0];
             double y = pointerLocation.Y - twoIntArray[1];
-            Point point = new Point(fromPixels(x), fromPixels(y));
+            var point = new Point(fromPixels(x), fromPixels(y));
 
             // Call the method
             onTouchAction(touchEffect.formsElement,

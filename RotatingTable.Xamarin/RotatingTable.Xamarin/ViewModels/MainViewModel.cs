@@ -17,7 +17,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private bool _isConnected;
         private bool _isRunning;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
         private int _currentMode;
         private int _currentStep;
         private int _currentPos;

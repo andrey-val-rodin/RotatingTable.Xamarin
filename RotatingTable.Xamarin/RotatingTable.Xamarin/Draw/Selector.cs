@@ -21,23 +21,16 @@ namespace RotatingTable.Xamarin.Draw
 
         public BaseDrawer GetDrawer(Mode mode)
         {
-            switch (mode)
+            return mode switch
             {
-                case Mode.Auto:
-                    return _drawers[(int)Mode.Auto];
-                case Mode.Manual:
-                    return _drawers[(int)Mode.Manual];
-                case Mode.Nonstop:
-                    return _drawers[(int)Mode.Nonstop];
-                case Mode.Rotate90:
-                    return _drawers[(int)Mode.Rotate90];
-                case Mode.FreeMovement:
-                    return _drawers[(int)Mode.FreeMovement];
-                case Mode.Video:
-                    return _drawers[(int)Mode.Video];
-                default:
-                    throw new InvalidOperationException("Unknown mode");
-            }
+                Mode.Auto => _drawers[(int)Mode.Auto],
+                Mode.Manual => _drawers[(int)Mode.Manual],
+                Mode.Nonstop => _drawers[(int)Mode.Nonstop],
+                Mode.Rotate90 => _drawers[(int)Mode.Rotate90],
+                Mode.FreeMovement => _drawers[(int)Mode.FreeMovement],
+                Mode.Video => _drawers[(int)Mode.Video],
+                _ => throw new InvalidOperationException("Unknown mode"),
+            };
         }
 
         public void Clear()

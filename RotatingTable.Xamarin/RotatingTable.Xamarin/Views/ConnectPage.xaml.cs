@@ -25,8 +25,7 @@ namespace RotatingTable.Xamarin.Views
 
         private async void ListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)
         {
-            var item = e.SelectedItem as DeviceItem;
-            if (item == null)
+            if (e.SelectedItem is not DeviceItem item)
                 return;
 
             var service = DependencyService.Resolve<IBluetoothService>();
