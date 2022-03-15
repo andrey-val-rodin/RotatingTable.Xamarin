@@ -14,8 +14,13 @@ namespace RotatingTable.Xamarin.Draw
             base.Draw(args);
 
             DrawCircle();
-            DrawMarker(Model.CurrentPos);
-            DrawArrow();
+
+            if (Model.CurrentPos != 0)
+            {
+                DrawMarker(Model.CurrentPos);
+                DrawArrow();
+            }
+
             DrawBorder();
         }
     }

@@ -31,7 +31,7 @@ namespace RotatingTable.Xamarin.Draw
 
                 return angle;
             }
-            set => throw new NotImplementedException();
+            set { }
         }
 
         protected override int EndAngle
@@ -49,7 +49,7 @@ namespace RotatingTable.Xamarin.Draw
 
                 return angle;
             }
-            set => throw new NotImplementedException();
+            set { }
         }
 
         private bool IsClockwise

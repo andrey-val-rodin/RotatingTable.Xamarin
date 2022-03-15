@@ -91,6 +91,7 @@ namespace RotatingTable.Xamarin.Draw
         {
             _isBusy = false;
             _isDragging = false;
+            StartAngle = EndAngle = 0;
             _offset = 0;
         }
 

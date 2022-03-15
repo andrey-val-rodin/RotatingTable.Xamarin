@@ -13,12 +13,16 @@ namespace RotatingTable.Xamarin.Draw
         public override void Draw(SKPaintSurfaceEventArgs args)
         {
             base.Draw(args);
-
             DrawCircle();
-            DrawMarker(Model.CurrentPos);
-            DrawArrow();
+
+            if (Model.CurrentPos != 0)
+            {
+                DrawMarker(Model.CurrentPos);
+                DrawArrow();
+                DrawText(0, 40, Model.CurrentStep.ToString(), 100, SKTextAlign.Center);
+            }
+
             DrawBorder();
-            DrawText(0, 40, Model.CurrentStep.ToString(), 100, SKTextAlign.Center);
         }
     }
 }
