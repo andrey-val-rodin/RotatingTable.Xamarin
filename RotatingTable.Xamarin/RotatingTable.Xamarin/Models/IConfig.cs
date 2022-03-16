@@ -5,6 +5,8 @@ namespace RotatingTable.Xamarin.Models
 {
     public interface IConfig
     {
+        IStorage Storage { get; set; }
+
         Task<Guid> GetDeviceIdAsync();
         Task SetDeviceIdAsync(Guid id);
         Task<int> GetStepsAsync();

@@ -13,6 +13,7 @@ namespace RotatingTable.Xamarin.Models
         public static readonly int[] StepValues =
             { 2, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 60, 72, 90, 120, 180, 360 };
 
+        public static Guid DefaultDeviceIdValue = Guid.Empty;
         public const int DefaultStepsValue = 24;
         public const int DefaultAccelerationValue = 7;
         public const int DefaultDelayValue = 0;

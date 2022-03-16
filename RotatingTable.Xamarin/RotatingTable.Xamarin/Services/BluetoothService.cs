@@ -97,12 +97,7 @@ namespace RotatingTable.Xamarin.Services
                 if (tokenSource.Token.IsCancellationRequested)
                     return false;
 
-                // Save config
-                var configService = DependencyService.Resolve<IConfig>();
-                if (!await SetStepsAsync(await configService.GetStepsAsync()) ||
-                    !await SetAccelerationAsync(await configService.GetAccelerationAsync()) ||
-                    !await SetDelayAsync(await configService.GetDelayAsync()) ||
-                    !await SetExposureAsync(await configService.GetExposureAsync()))
+                if (!await SetConfigAsync())
                 {
                     IsConnected = false;
                     error = "Не удалось передать столу параметры";
@@ -312,6 +307,27 @@ namespace RotatingTable.Xamarin.Services
             }
 
             return null;
+        }
+
+        private async Task<bool> SetConfigAsync()
+        {
+            var config = DependencyService.Resolve<IConfig>();
+            var steps = await config.GetStepsAsync();
+            var acceleration = await config.GetAccelerationAsync();
+            var delay = await config.GetDelayAsync();
+            var exposure = await config.GetExposureAsync();
+
+            if (!await SetStepsAsync(steps) ||
+                !await SetAccelerationAsync(acceleration) ||
+                !await SetDelayAsync(delay) ||
+                !await SetExposureAsync(exposure))
+                return false;
+
+            await config.SetStepsAsync(steps);
+            await config.SetAccelerationAsync(acceleration);
+            await config.SetDelayAsync(delay);
+            await config.SetExposureAsync(exposure);
+            return true;
         }
 
         private async Task<bool> WriteCommandAsync(string command)

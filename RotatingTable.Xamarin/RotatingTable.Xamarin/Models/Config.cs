@@ -1,22 +1,24 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Xamarin.Essentials;
 
 namespace RotatingTable.Xamarin.Models
 {
     public class Config : IConfig
     {
-        private Guid _idBackingStore = Guid.Empty;
+        private Guid _idBackingStore = ConfigValidator.DefaultDeviceIdValue;
         private int _stepsBackingStore = ConfigValidator.DefaultStepsValue;
         private int _accelerationBackingStore = ConfigValidator.DefaultAccelerationValue;
         private int _exposureBackingStore = ConfigValidator.DefaultExposureValue;
         private int _delayBackingStore = ConfigValidator.DefaultDelayValue;
 
+        public IStorage Storage { get; set; } = new Storage();
+
         public async Task<Guid> GetDeviceIdAsync()
         {
             try
             {
-                return Guid.Parse(await SecureStorage.GetAsync("DeviceId"));
+                var id = await Storage.GetAsync("DeviceId");
+                return string.IsNullOrEmpty(id) ? _idBackingStore : Guid.Parse(id);
             }
             catch
             {
@@ -29,7 +31,7 @@ namespace RotatingTable.Xamarin.Models
             try
             {
                 // {00000000-0000-0000-0000-e684736e04f7}
-                await SecureStorage.SetAsync("DeviceId", id.ToString());
+                await Storage.SetAsync("DeviceId", id.ToString());
             }
             catch
             {
@@ -41,8 +43,8 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                var steps = await SecureStorage.GetAsync("Steps");
-                return int.Parse(steps.ToString());
+                var steps = await Storage.GetAsync("Steps");
+                return string.IsNullOrEmpty(steps) ? _stepsBackingStore : int.Parse(steps);
             }
             catch
             {
@@ -54,7 +56,7 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                await SecureStorage.SetAsync("Steps", steps.ToString());
+                await Storage.SetAsync("Steps", steps.ToString());
             }
             catch
             {
@@ -66,8 +68,8 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                var acceleration = await SecureStorage.GetAsync("Acceleration");
-                return int.Parse(acceleration.ToString());
+                var acceleration = await Storage.GetAsync("Acceleration");
+                return string.IsNullOrEmpty(acceleration) ? _accelerationBackingStore : int.Parse(acceleration);
             }
             catch
             {
@@ -79,7 +81,7 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                await SecureStorage.SetAsync("Acceleration", acceleration.ToString());
+                await Storage.SetAsync("Acceleration", acceleration.ToString());
             }
             catch
             {
@@ -91,8 +93,8 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                var delay = await SecureStorage.GetAsync("Delay");
-                return int.Parse(delay.ToString());
+                var delay = await Storage.GetAsync("Delay");
+                return string.IsNullOrEmpty(delay) ? _delayBackingStore : int.Parse(delay);
             }
             catch
             {
@@ -104,7 +106,7 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                await SecureStorage.SetAsync("Delay", delay.ToString());
+                await Storage.SetAsync("Delay", delay.ToString());
             }
             catch
             {
@@ -116,8 +118,8 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                var exposure = await SecureStorage.GetAsync("Exposure");
-                return int.Parse(exposure.ToString());
+                var exposure = await Storage.GetAsync("Exposure");
+                return string.IsNullOrEmpty(exposure) ? _exposureBackingStore : int.Parse(exposure);
             }
             catch
             {
@@ -129,7 +131,7 @@ namespace RotatingTable.Xamarin.Models
         {
             try
             {
-                await SecureStorage.SetAsync("Exposure", exposure.ToString());
+                await Storage.SetAsync("Exposure", exposure.ToString());
             }
             catch
             {
