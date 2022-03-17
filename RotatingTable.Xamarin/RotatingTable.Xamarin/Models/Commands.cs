@@ -14,10 +14,14 @@
         public const string GetAcceleration = "GET ACC";
         public const string GetExposure     = "GET EXP";
         public const string GetDelay        = "GET DELAY";
+        public const string GetVideoPWM     = "GET VPWM";
+        public const string GetNFrequency   = "GET NFREQ";
         public const string SetAcceleration = "SET ACC";
         public const string SetSteps        = "SET STEPS";
         public const string SetExposure     = "SET EXP";
         public const string SetDelay        = "SET DELAY";
+        public const string SetVideoPWM     = "SET VPWM";
+        public const string SetNFrequency   = "SET NFREQ";
         public const string Position        = "POS ";
         public const string GetMode         = "GET MODE";
         public const string RunAutoMode     = "RUN AUTO";

@@ -25,13 +25,21 @@ namespace RotatingTable.Xamarin.Services
         Task<bool> DecreasePWMAsync();
         Task<bool> PhotoAsync();
         Task<bool> NextAsync(EventHandler<DeviceInputEventArgs> eventHandler);
-        Task<bool> SetAccelerationAsync(int acceleration);
-        Task<bool> SetDelayAsync(int delay);
-        Task<bool> SetExposureAsync(int exposure);
-        Task<bool> SetStepsAsync(int steps);
         Task<bool> StopAsync();
         Task<bool> SoftStopAsync();
         void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout);
         void CancelWaitingForStop();
+        Task<bool> SetStepsAsync(int steps);
+        Task<bool> SetAccelerationAsync(int acceleration);
+        Task<bool> SetDelayAsync(int delay);
+        Task<bool> SetExposureAsync(int exposure);
+        Task<bool> SetVideoPWMAsync(int videoPwm);
+        Task<bool> SetNonstopFrequencyAsync(float nonstopFrequency);
+        Task<int?> GetStepsAsync();
+        Task<int?> GetAccelerationAsync();
+        Task<int?> GetDelayAsync();
+        Task<int?> GetExposureAsync();
+        Task<int?> GetVideoPWMAsync();
+        Task<float?> GetNonstopFrequencyAsync();
     }
 }

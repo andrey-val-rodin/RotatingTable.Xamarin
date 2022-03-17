@@ -275,7 +275,7 @@ namespace RotatingTable.Xamarin.ViewModels
                         break;
 
                     case (int)Mode.Nonstop:
-                        IsRunning = await Service.RunNonStopAsync((s, a) => OnDataReseived(a.Text));
+                        IsRunning = await Service.RunNonStopAsync(async (s, a) => await OnNonstopDataReseivedAsync(a.Text));
                         break;
 
                     case (int)Mode.Rotate90:
@@ -316,6 +316,30 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
+        public async Task OnNonstopDataReseivedAsync(string text)
+        {
+            if (text.StartsWith(Commands.Step))
+            {
+                CurrentStep = int.TryParse(text.Substring(Commands.Step.Length), out int i) ? i : 0;
+            }
+            else if (text.StartsWith(Commands.Position))
+            {
+                CurrentPos = int.TryParse(text.Substring(Commands.Position.Length), out int i) ? i : 0;
+            }
+            else if (text == Commands.End)
+            {
+                // finished
+                IsRunning = false;
+                CurrentStep = 0;
+                CurrentPos = 0;
+
+                // Store nonstop frequency
+                var nonstopFrequency = await Service.GetNonstopFrequencyAsync();
+                if (nonstopFrequency != null)
+                    await Config.SetNonstopFrequencyAsync(nonstopFrequency.Value);
+            }
+        }
+
         private async Task StopAsync()
         {
             await _semaphore.WaitAsync();
@@ -338,11 +362,16 @@ namespace RotatingTable.Xamarin.ViewModels
 
                         IsSoftStopping = true;
                         Service.BeginWaitingForStop(
-                            (s, a) =>
+                            async (s, a) =>
                             {
                                 IsSoftStopping = false;
                                 IsRunning = false;
                                 Stop?.Invoke(this, EventArgs.Empty);
+
+                                // Store current PWM
+                                var videoPWM = await Service.GetVideoPWMAsync();
+                                if (videoPWM != null)
+                                    await Config.SetVideoPWMAsync(videoPWM.Value);
                             },
                             async (s, a) =>
                             {
@@ -393,7 +422,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        public void OnManualStepDataReseived(string text)
+        public async void OnManualStepDataReseived(string text)
         {
             if (text.StartsWith(Commands.Step))
             {
@@ -412,6 +441,11 @@ namespace RotatingTable.Xamarin.ViewModels
                 _performingManualStep = false;
                 CurrentStep = 0;
                 CurrentPos = 0;
+
+                // Store current frequency
+                var nonstopFrequency = await Service.GetNonstopFrequencyAsync();
+                if (nonstopFrequency != null)
+                    await Config.SetNonstopFrequencyAsync(nonstopFrequency.Value);
             }
         }
 

@@ -10,6 +10,8 @@ namespace RotatingTable.Xamarin.Models
         private int _accelerationBackingStore = ConfigValidator.DefaultAccelerationValue;
         private int _exposureBackingStore = ConfigValidator.DefaultExposureValue;
         private int _delayBackingStore = ConfigValidator.DefaultDelayValue;
+        private int _videoPWMBackingStore = ConfigValidator.DefaultVideoPWMValue;
+        private float _nonstopFrequencyBackingStore = ConfigValidator.DefaultNonstopFrequencyValue;
 
         public IStorage Storage { get; set; } = new Storage();
 
@@ -136,6 +138,56 @@ namespace RotatingTable.Xamarin.Models
             catch
             {
                 _exposureBackingStore = exposure;
+            }
+        }
+
+        public async Task<int> GetVideoPWMAsync()
+        {
+            try
+            {
+                var videoPWM = await Storage.GetAsync("VideoPWM");
+                return string.IsNullOrEmpty(videoPWM) ? _videoPWMBackingStore : int.Parse(videoPWM);
+            }
+            catch
+            {
+                return _videoPWMBackingStore;
+            }
+        }
+
+        public async Task SetVideoPWMAsync(int videoPWM)
+        {
+            try
+            {
+                await Storage.SetAsync("VideoPWM", videoPWM.ToString());
+            }
+            catch
+            {
+                _videoPWMBackingStore = videoPWM;
+            }
+        }
+
+        public async Task<float> GetNonstopFrequencyAsync()
+        {
+            try
+            {
+                var nonstopFrequency = await Storage.GetAsync("NonstopFrequency");
+                return string.IsNullOrEmpty(nonstopFrequency) ? _nonstopFrequencyBackingStore : float.Parse(nonstopFrequency);
+            }
+            catch
+            {
+                return _nonstopFrequencyBackingStore;
+            }
+        }
+
+        public async Task SetNonstopFrequencyAsync(float nonstopFrequency)
+        {
+            try
+            {
+                await Storage.SetAsync("NonstopFrequency", nonstopFrequency.ToString());
+            }
+            catch
+            {
+                _nonstopFrequencyBackingStore = nonstopFrequency;
             }
         }
     }

@@ -153,5 +153,63 @@ namespace Tests
 
             Assert.Equal(5, delay);
         }
+
+        [Fact]
+        public async Task GetVideoPWM_ExceptionInStorage_DefaultResult()
+        {
+            var config = new Config { Storage = new NotImplementedStorageStub() };
+            var videoPWM = await config.GetVideoPWMAsync();
+
+            Assert.Equal(ConfigValidator.DefaultVideoPWMValue, videoPWM);
+        }
+
+        [Fact]
+        public async Task SetAndThenGetVideoPWM_ExceptionInStorage_StillValidResult()
+        {
+            var config = new Config { Storage = new NotImplementedStorageStub() };
+            await config.SetVideoPWMAsync(250);
+            var videoPWM = await config.GetVideoPWMAsync();
+
+            Assert.Equal(250, videoPWM);
+        }
+
+        [Fact]
+        public async Task SetAndThenGetVideoPWM_CorrectStorage_StillValidResult()
+        {
+            var config = new Config { Storage = new StorageStub() };
+            await config.SetVideoPWMAsync(5);
+            var videoPWM = await config.GetVideoPWMAsync();
+
+            Assert.Equal(5, videoPWM);
+        }
+
+        [Fact]
+        public async Task GetNonstopFrequency_ExceptionInStorage_DefaultResult()
+        {
+            var config = new Config { Storage = new NotImplementedStorageStub() };
+            var nonstopFrequency = await config.GetNonstopFrequencyAsync();
+
+            Assert.Equal(ConfigValidator.DefaultNonstopFrequencyValue, nonstopFrequency);
+        }
+
+        [Fact]
+        public async Task SetAndThenGetNonstopFrequency_ExceptionInStorage_StillValidResult()
+        {
+            var config = new Config { Storage = new NotImplementedStorageStub() };
+            await config.SetNonstopFrequencyAsync(1.23F);
+            var nonstopFrequency = await config.GetNonstopFrequencyAsync();
+
+            Assert.Equal(1.23F, nonstopFrequency);
+        }
+
+        [Fact]
+        public async Task SetAndThenGetNonstopFrequency_CorrectStorage_StillValidResult()
+        {
+            var config = new Config { Storage = new StorageStub() };
+            await config.SetNonstopFrequencyAsync(1.23F);
+            var nonstopFrequency = await config.GetNonstopFrequencyAsync();
+
+            Assert.Equal(1.23F, nonstopFrequency);
+        }
     }
 }

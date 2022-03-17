@@ -7,6 +7,7 @@ using RotatingTable.Xamarin.Handlers;
 using RotatingTable.Xamarin.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -19,7 +20,6 @@ namespace RotatingTable.Xamarin.Services
 {
     public class BluetoothService : IBluetoothService
     {
-        //private static readonly Guid ServiceUuid = new("e7810a71-73ae-499d-8c15-faa9aef0c3f2");
         private static readonly Guid ServiceUuid = new("000018f0-0000-1000-8000-00805f9b34fb");
         private static readonly Guid UpdatesCharacteristicUuid = new("00002af0-0000-1000-8000-00805f9b34fb");
         private static readonly Guid WriteCharacteristicUuid = new("00002af1-0000-1000-8000-00805f9b34fb");
@@ -27,7 +27,9 @@ namespace RotatingTable.Xamarin.Services
         public const char Terminator = '\n';
 
         private readonly IUserDialogs _userDialogs;
-        private string _response;
+        private string _stringResponse;
+        private int? _intResponse;
+        private float? _floatResponse;
         private ListeningStream _stream;
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
         private EventHandler<DeviceInputEventArgs> _listeningHandler;
@@ -316,43 +318,82 @@ namespace RotatingTable.Xamarin.Services
             var acceleration = await config.GetAccelerationAsync();
             var delay = await config.GetDelayAsync();
             var exposure = await config.GetExposureAsync();
+            var videoPwm = await config.GetVideoPWMAsync();
+            var nonstopFrequency = await config.GetNonstopFrequencyAsync();
 
             if (!await SetStepsAsync(steps) ||
                 !await SetAccelerationAsync(acceleration) ||
                 !await SetDelayAsync(delay) ||
-                !await SetExposureAsync(exposure))
+                !await SetExposureAsync(exposure) ||
+                !await SetVideoPWMAsync(videoPwm) ||
+                !await SetNonstopFrequencyAsync(nonstopFrequency))
                 return false;
 
             await config.SetStepsAsync(steps);
             await config.SetAccelerationAsync(acceleration);
             await config.SetDelayAsync(delay);
             await config.SetExposureAsync(exposure);
+            await config.SetVideoPWMAsync(videoPwm);
+            await config.SetNonstopFrequencyAsync(nonstopFrequency);
             return true;
         }
 
-        private async Task<bool> WriteCommandAsync(string command)
+        private async Task<bool> SendCommandAsync(string command)
         {
-            return await WriteCommandAsync(command,
+            return await WriteCommandAndGetResponseAsync(command,
                     new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
-        private async Task<string> WriteCommandAsync(string command, string[] acceptedTokens)
+        private async Task<int?> GetIntParameterAsync(string parameter)
         {
-            System.Diagnostics.Debug.WriteLine($"Command: {command}");
+            return await WriteCommandAndGetResponseAsync(parameter, IntHandler, ListenForInt);
+        }
 
-            await _semaphore.WaitAsync();
+        private async Task<float?> GetFloatParameterAsync(string parameter)
+        {
+            return await WriteCommandAndGetResponseAsync(parameter, FloatHandler, ListenForFloat);
+        }
 
+        private async Task<string> WriteCommandAndGetResponseAsync(string command, string[] acceptedTokens)
+        {
             _acceptedTokens.Clear();
             _acceptedTokens.AddRange(acceptedTokens);
 
+            return await WriteCommandAndGetResponseAsync(command, CommandHandler, ListenForOkOrErrorAsync);
+        }
+
+        private async Task<T> WriteCommandAndGetResponseAsync<T>(
+            string command,
+            EventHandler<DeviceInputEventArgs> handler,
+            Func<string, EventHandler<DeviceInputEventArgs>, Task<T>> func)
+        {
             // Append terminator
             command += Terminator;
 
+            await _semaphore.WaitAsync();
             try
             {
-                _stream.TokenUpdated += CommandHandler;
-                _response = null;
+                return await func(command, handler);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
+                return default;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
+        private async Task<string> ListenForOkOrErrorAsync(string command, EventHandler<DeviceInputEventArgs> handler)
+        {
+            System.Diagnostics.Debug.WriteLine($"Command: {command}");
+
+            _stream.TokenUpdated += handler;
+            try
+            {
                 // See API limitations in https://github.com/xabre/xamarin-bluetooth-le
                 // "Characteristic/Descriptor Write: make sure you call characteristic.WriteAsync(...) from the main thread,
                 // failing to do so will most probably result in a GattWriteError."
@@ -360,44 +401,149 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                var token = new CancellationTokenSource(500).Token;
-                string response = await Task.Run(async () =>
-                {
-                    while (true)
-                    {
-                        if (!string.IsNullOrEmpty(_response) || token.IsCancellationRequested)
-                            return _response;
-
-                        await Task.Delay(5);
-                    }
-                }, token);
-
-                if (string.IsNullOrEmpty(response))
-                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-
-                return response;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(ex.Message);
-                await _userDialogs.AlertAsync(ex.Message, "Ошибка соединения");
-                return null;
+                return await GetStringResponseAsync();
             }
             finally
             {
-                _semaphore.Release();
-                _stream.TokenUpdated -= CommandHandler;
+                _stream.TokenUpdated -= handler;
             }
+        }
+
+        private async Task<string> GetStringResponseAsync()
+        {
+            _stringResponse = null;
+            var token = new CancellationTokenSource(500).Token;
+            string response = await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (!string.IsNullOrEmpty(_stringResponse) || token.IsCancellationRequested)
+                        return _stringResponse;
+
+                    await Task.Delay(5);
+                }
+            }, token);
+
+            if (string.IsNullOrEmpty(response))
+                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+            return response;
         }
 
         private void CommandHandler(object sender, DeviceInputEventArgs args)
         {
             // Take only first accepted token
-            if (!string.IsNullOrEmpty(_response))
+            if (!string.IsNullOrEmpty(_stringResponse))
                 return;
 
             if (_acceptedTokens.Contains(args.Text))
-                _response = args.Text;
+                _stringResponse = args.Text;
+        }
+
+        private async Task<int?> ListenForInt(string command, EventHandler<DeviceInputEventArgs> handler)
+        {
+            System.Diagnostics.Debug.WriteLine($"Command: {command}");
+
+            _stream.TokenUpdated += handler;
+            try
+            {
+                // See API limitations in https://github.com/xabre/xamarin-bluetooth-le
+                // "Characteristic/Descriptor Write: make sure you call characteristic.WriteAsync(...) from the main thread,
+                // failing to do so will most probably result in a GattWriteError."
+                if (!await MainThread.InvokeOnMainThreadAsync(async () =>
+                    await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
+                    return null;
+
+                return await GetIntResponseAsync();
+            }
+            finally
+            {
+                _stream.TokenUpdated -= handler;
+            }
+        }
+
+        private async Task<int?> GetIntResponseAsync()
+        {
+            _intResponse = null;
+            var token = new CancellationTokenSource(500).Token;
+            int? response = await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (_intResponse != null || token.IsCancellationRequested)
+                        return _intResponse;
+
+                    await Task.Delay(5);
+                }
+            }, token);
+
+            if (response == null)
+                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+            return response;
+        }
+
+        private void IntHandler(object sender, DeviceInputEventArgs args)
+        {
+            // Take only first accepted token
+            if (_intResponse != null)
+                return;
+
+            if (int.TryParse(args.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var result))
+                _intResponse = result;
+        }
+
+        private async Task<float?> ListenForFloat(string command, EventHandler<DeviceInputEventArgs> handler)
+        {
+            System.Diagnostics.Debug.WriteLine($"Command: {command}");
+
+            _stream.TokenUpdated += handler;
+            try
+            {
+                // See API limitations in https://github.com/xabre/xamarin-bluetooth-le
+                // "Characteristic/Descriptor Write: make sure you call characteristic.WriteAsync(...) from the main thread,
+                // failing to do so will most probably result in a GattWriteError."
+                if (!await MainThread.InvokeOnMainThreadAsync(async () =>
+                    await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
+                    return null;
+
+                return await GetFloatResponseAsync();
+            }
+            finally
+            {
+                _stream.TokenUpdated -= handler;
+            }
+        }
+
+        private async Task<float?> GetFloatResponseAsync()
+        {
+            _floatResponse = null;
+            var token = new CancellationTokenSource(500).Token;
+            float? response = await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    if (_floatResponse != null || token.IsCancellationRequested)
+                        return _floatResponse;
+
+                    await Task.Delay(5);
+                }
+            }, token);
+
+            if (response == null)
+                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+            return response;
+        }
+        
+        private void FloatHandler(object sender, DeviceInputEventArgs args)
+        {
+            // Take only first accepted token
+            if (_floatResponse != null)
+                return;
+
+            if (float.TryParse(args.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+                _floatResponse = result;
         }
 
         private void BeginListening(
@@ -439,7 +585,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteCommandAsync(Commands.Status,
+            return await WriteCommandAndGetResponseAsync(Commands.Status,
                 new[] { Commands.Running, Commands.Busy, Commands.Ready });
         }
 
@@ -496,7 +642,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteCommandAsync(Commands.IncreasePWM);
+            return await SendCommandAsync(Commands.IncreasePWM);
         }
 
         public async Task<bool> DecreasePWMAsync()
@@ -504,7 +650,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteCommandAsync(Commands.DecreasePWM);
+            return await SendCommandAsync(Commands.DecreasePWM);
         }
 
         public async Task<bool> PhotoAsync()
@@ -512,7 +658,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            return await WriteCommandAsync(Commands.Shutter);
+            return await SendCommandAsync(Commands.Shutter);
         }
 
         public async Task<bool> NextAsync(EventHandler<DeviceInputEventArgs> eventHandler)
@@ -551,7 +697,7 @@ namespace RotatingTable.Xamarin.Services
                     BeginListening(eventHandler, listeningHandler);
                 }
 
-                success = await WriteCommandAsync(command,
+                success = await WriteCommandAndGetResponseAsync(command,
                     new[] { Commands.OK, Commands.Error }) == Commands.OK;
             }
             finally
@@ -568,7 +714,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var result = await WriteCommandAsync(Commands.Stop,
+            var result = await WriteCommandAndGetResponseAsync(Commands.Stop,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
 
             return result;
@@ -579,7 +725,7 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var result = await WriteCommandAsync(Commands.SoftStop,
+            var result = await WriteCommandAndGetResponseAsync(Commands.SoftStop,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
 
             return result;
@@ -625,8 +771,8 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var command = Commands.SetSteps + ' ' + steps.ToString();
-            return await WriteCommandAsync(command,
+            var command = Commands.SetSteps + ' ' + steps.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -635,8 +781,8 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var command = Commands.SetAcceleration + ' ' + acceleration.ToString();
-            return await WriteCommandAsync(command,
+            var command = Commands.SetAcceleration + ' ' + acceleration.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -645,8 +791,8 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var command = Commands.SetDelay + ' ' + delay.ToString();
-            return await WriteCommandAsync(command,
+            var command = Commands.SetDelay + ' ' + delay.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
 
@@ -655,9 +801,77 @@ namespace RotatingTable.Xamarin.Services
             if (!IsConnected)
                 throw new InvalidOperationException("Not connected");
 
-            var command = Commands.SetExposure + ' ' + exposure.ToString();
-            return await WriteCommandAsync(command,
+            var command = Commands.SetExposure + ' ' + exposure.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
+        }
+
+        public async Task<bool> SetVideoPWMAsync(int videoPwm)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetVideoPWM + ' ' + videoPwm.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
+        }
+        
+        public async Task<bool> SetNonstopFrequencyAsync(float nonstopFrequency)
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            var command = Commands.SetNFrequency + ' ' + nonstopFrequency.ToString(CultureInfo.InvariantCulture);
+            return await WriteCommandAndGetResponseAsync(command,
+                new[] { Commands.OK, Commands.Error }) == Commands.OK;
+        }
+
+        public async Task<int?> GetStepsAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetIntParameterAsync(Commands.GetSteps);
+        }
+
+        public async Task<int?> GetAccelerationAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetIntParameterAsync(Commands.GetAcceleration);
+        }
+
+        public async Task<int?> GetDelayAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetIntParameterAsync(Commands.GetDelay);
+        }
+
+        public async Task<int?> GetExposureAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetIntParameterAsync(Commands.GetExposure);
+        }
+
+        public async Task<int?> GetVideoPWMAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetIntParameterAsync(Commands.GetVideoPWM);
+        }
+
+        public async Task<float?> GetNonstopFrequencyAsync()
+        {
+            if (!IsConnected)
+                throw new InvalidOperationException("Not connected");
+
+            return await GetFloatParameterAsync(Commands.GetNFrequency);
         }
     }
 }

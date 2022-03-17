@@ -18,6 +18,8 @@ namespace RotatingTable.Xamarin.Models
         public const int DefaultAccelerationValue = 7;
         public const int DefaultDelayValue = 0;
         public const int DefaultExposureValue = 100;
+        public const int DefaultVideoPWMValue = 100;
+        public const float DefaultNonstopFrequencyValue = 0.5F;
 
         public static bool IsStepsValid(int value)
         {
@@ -64,6 +66,16 @@ namespace RotatingTable.Xamarin.Models
             return IsExposureValid(value)
                 ? value
                 : DefaultExposureValue;
+        }
+
+        public static bool IsVideoPWMValid(int value)
+        {
+            return -255 <= value && value <= 255;
+        }
+
+        public static bool IsNonstopFrequencyValid(float value)
+        {
+            return 0.5F <= value && value <= 3.0F;
         }
     }
 }

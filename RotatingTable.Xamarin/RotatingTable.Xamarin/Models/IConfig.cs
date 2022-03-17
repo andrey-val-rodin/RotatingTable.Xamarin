@@ -17,5 +17,9 @@ namespace RotatingTable.Xamarin.Models
         Task SetDelayAsync(int delay);
         Task<int> GetExposureAsync();
         Task SetExposureAsync(int exposure);
+        Task<int> GetVideoPWMAsync();
+        Task SetVideoPWMAsync(int videoPWM);
+        Task<float> GetNonstopFrequencyAsync();
+        Task SetNonstopFrequencyAsync(float nonstopFrequency);
     }
 }
