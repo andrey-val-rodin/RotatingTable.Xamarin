@@ -99,7 +99,7 @@ namespace RotatingTable.Xamarin.Views
                 Model.IsRunning = false;
                 Model.IsConnected = false;
                 _selector.Clear();
-                await ConnectAsync();
+                await Shell.Current.GoToAsync("//ConnectPage");
             });
         }
 
@@ -108,6 +108,9 @@ namespace RotatingTable.Xamarin.Views
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 await _userDialogs.AlertAsync("Соединение со столом разорвано");
+                await Model.Service.DisconnectAsync();
+                Model.IsRunning = false;
+                Model.IsConnected = false;
                 _selector.Clear();
                 await Shell.Current.GoToAsync("//ConnectPage");
             });
@@ -123,7 +126,7 @@ namespace RotatingTable.Xamarin.Views
                 Model.IsRunning = false;
                 Model.IsConnected = false;
                 _selector.Clear();
-                await ConnectAsync();
+                await Shell.Current.GoToAsync("//ConnectPage");
             });
         }
 
