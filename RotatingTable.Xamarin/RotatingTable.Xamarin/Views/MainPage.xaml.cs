@@ -131,11 +131,11 @@ namespace RotatingTable.Xamarin.Views
 
         private void DecreasePWMButton_Pressed(object sender, EventArgs e)
         {
-            if (Model.IsIncreasingPWM || Model.IsDecreasingPWM)
+            if (Model.ChangingPWM != ChangePWM.None)
                 return;
 
-            Cancel();
-            Model.IsDecreasingPWM = true;
+            Model.ChangingPWM = ChangePWM.Decrease;
+            _tokenSource?.Cancel();
             _tokenSource = new();
             var token = _tokenSource.Token;
 
@@ -145,7 +145,7 @@ namespace RotatingTable.Xamarin.Views
                 {
                     while (true)
                     {
-                        if (token.IsCancellationRequested)
+                        if (token.IsCancellationRequested || Model.ChangingPWM != ChangePWM.Decrease)
                             break;
 
                         if (!await Model.Service.DecreasePWMAsync())
@@ -160,26 +160,24 @@ namespace RotatingTable.Xamarin.Views
                 catch { }
                 finally
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                    {
-                        Model.IsDecreasingPWM = false;
-                    });
+                    Model.ChangingPWM = ChangePWM.None;
                 }
             });
         }
 
         private void DecreasePWMButton_Released(object sender, EventArgs e)
         {
-            Cancel();
+            if (Model.ChangingPWM == ChangePWM.Decrease)
+                Cancel();
         }
 
         private void IncreasePWMButton_Pressed(object sender, EventArgs e)
         {
-            if (Model.IsIncreasingPWM || Model.IsDecreasingPWM)
+            if (Model.ChangingPWM != ChangePWM.None)
                 return;
 
-            Cancel();
-            Model.IsIncreasingPWM = true;
+            Model.ChangingPWM = ChangePWM.Increase;
+            _tokenSource?.Cancel();
             _tokenSource = new();
             var token = _tokenSource.Token;
 
@@ -189,7 +187,7 @@ namespace RotatingTable.Xamarin.Views
                 {
                     while (true)
                     {
-                        if (token.IsCancellationRequested)
+                        if (token.IsCancellationRequested || Model.ChangingPWM != ChangePWM.Increase)
                             break;
 
                         if (!await Model.Service.IncreasePWMAsync())
@@ -204,17 +202,15 @@ namespace RotatingTable.Xamarin.Views
                 catch { }
                 finally
                 {
-                    await MainThread.InvokeOnMainThreadAsync(() =>
-                    {
-                        Model.IsIncreasingPWM = false;
-                    });
+                    Model.ChangingPWM = ChangePWM.None;
                 }
             });
         }
 
         private void IncreasePWMButton_Released(object sender, EventArgs e)
         {
-            Cancel();
+            if (Model.ChangingPWM == ChangePWM.Increase)
+                Cancel();
         }
 
         private void StopButton_Pressed(object sender, EventArgs e)
@@ -225,8 +221,7 @@ namespace RotatingTable.Xamarin.Views
         private void Cancel()
         {
             _tokenSource?.Cancel();
-            Model.IsIncreasingPWM = false;
-            Model.IsDecreasingPWM = false;
+            Model.ChangingPWM = ChangePWM.None;
         }
     }
 }

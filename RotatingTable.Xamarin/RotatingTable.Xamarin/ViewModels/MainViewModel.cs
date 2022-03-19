@@ -28,6 +28,8 @@ namespace RotatingTable.Xamarin.ViewModels
         private string _stopButtonText;
         private bool _isSoftStopping;
         private bool _performingManualStep;
+        private ChangePWM _changingPWM = ChangePWM.None;
+        private readonly object _locker = new object();
 
         public MainViewModel()
         {
@@ -214,8 +216,23 @@ namespace RotatingTable.Xamarin.ViewModels
                 CurrentMode == (int)Mode.Auto;
         }
 
-        public bool IsIncreasingPWM { get; set; }
-        public bool IsDecreasingPWM { get; set; }
+        public ChangePWM ChangingPWM
+        {
+            get
+            {
+                lock(_locker)
+                {
+                    return _changingPWM;
+                }
+            }
+            set
+            {
+                lock (_locker)
+                {
+                    _changingPWM = value;
+                }
+            }
+        }
 
         private bool IsSoftStopping
         {

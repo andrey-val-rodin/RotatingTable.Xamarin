@@ -3,7 +3,7 @@ using SkiaSharp.Views.Forms;
 
 namespace RotatingTable.Xamarin.Draw
 {
-    public class VideoDrawer : ChangablePWMDriver
+    public class VideoDrawer : ChangablePWMDrawer
     {
         public VideoDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {

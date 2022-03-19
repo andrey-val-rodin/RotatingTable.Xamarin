@@ -4,7 +4,7 @@ using SkiaSharp.Views.Forms;
 
 namespace RotatingTable.Xamarin.Draw
 {
-    public class NonStopDrawer : ChangablePWMDriver
+    public class NonStopDrawer : ChangablePWMDrawer
     {
         public NonStopDrawer(SKCanvasView canvasView, MainViewModel model) : base(canvasView, model)
         {
