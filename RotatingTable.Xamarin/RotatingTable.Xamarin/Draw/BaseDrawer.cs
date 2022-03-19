@@ -140,14 +140,14 @@ namespace RotatingTable.Xamarin.Draw
 
         protected void DrawMarker(int pos)
         {
-            var angle = pos % 360 + 90;
+            var angle = pos % 360 + 89.8;
             _paint.Style = SKPaintStyle.Fill;
             _paint.Shader = null;
-            _paint.Color = Color.Blue.ToSKColor();
+            _paint.Color = ((Color)Application.Current.Resources["Marker"]).ToSKColor();
             Canvas.DrawCircle(GetCirclePt(angle, Radius - 24), 10, _paint);
         }
 
-        protected SKPoint GetCirclePt(int angleDegrees, int raduis)
+        protected SKPoint GetCirclePt(double angleDegrees, int raduis)
         {
             return new SKPoint
             {
@@ -162,7 +162,7 @@ namespace RotatingTable.Xamarin.Draw
 
         public abstract void Clear();
 
-        public static double ToDegrees(double radians) => radians * 180 / Math.PI;
-        public static double ToRadians(double degrees) => Math.PI * degrees / 180;
+        public static double ToDegrees(double radians) => radians * 180.0 / Math.PI;
+        public static double ToRadians(double degrees) => Math.PI * degrees / 180.0;
     }
 }

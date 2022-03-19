@@ -29,6 +29,9 @@ namespace RotatingTable.Xamarin.Views
                 return;
 
             var service = DependencyService.Resolve<IBluetoothService>();
+            if (service.IsConnected)
+                await service.DisconnectAsync();
+
             if (!await service.ConnectAsync(item.Device))
                 ((ListView)sender).SelectedItem = null;
             else

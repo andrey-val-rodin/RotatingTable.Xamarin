@@ -412,7 +412,7 @@ namespace RotatingTable.Xamarin.Services
         private async Task<string> GetStringResponseAsync()
         {
             _stringResponse = null;
-            var token = new CancellationTokenSource(500).Token;
+            var token = new CancellationTokenSource(1000).Token;
             string response = await Task.Run(async () =>
             {
                 while (true)
