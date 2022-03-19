@@ -29,7 +29,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private bool _isSoftStopping;
         private bool _performingManualStep;
         private ChangePWM _changingPWM = ChangePWM.None;
-        private readonly object _locker = new object();
+        private readonly object _locker = new();
 
         public MainViewModel()
         {

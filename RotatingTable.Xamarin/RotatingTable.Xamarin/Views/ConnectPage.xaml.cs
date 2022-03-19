@@ -40,8 +40,7 @@ namespace RotatingTable.Xamarin.Views
                 await configService.SetDeviceIdAsync(item.Device.Id);
 
                 await Shell.Current.GoToAsync("//MainPage");
-                var mainPage = Shell.Current?.CurrentPage as MainPage;
-                if (mainPage != null)
+                if (Shell.Current?.CurrentPage is MainPage mainPage)
                     await mainPage.Model.InitAsync();
             }
         }
