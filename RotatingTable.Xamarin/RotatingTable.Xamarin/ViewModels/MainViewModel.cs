@@ -207,7 +207,8 @@ namespace RotatingTable.Xamarin.ViewModels
         public bool ShowExposure
         {
             get => !IsRunning ||
-                CurrentMode == (int)Mode.Auto;
+                CurrentMode == (int)Mode.Auto ||
+                CurrentMode == (int)Mode.Manual;
         }
 
         public bool ShowDelay

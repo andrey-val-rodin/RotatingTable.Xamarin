@@ -13,7 +13,7 @@
             <Color x:Key="Border">#BEBEBE</Color>
             <Color x:Key="Arrow">#404040</Color>
             <Color x:Key="Highlight">#ECECEC</Color>
-            <Color x:Key="Marker">Green</Color>
+            <Color x:Key="Marker">#008E00</Color>
             <Style TargetType="Button">
                 <Setter Property="TextColor" Value="White"></Setter>
                 <Setter Property="VisualStateManager.VisualStateGroups">
