@@ -38,7 +38,11 @@ namespace RotatingTable.Xamarin.Views
             {
                 var configService = DependencyService.Resolve<IConfig>();
                 await configService.SetDeviceIdAsync(item.Device.Id);
+
                 await Shell.Current.GoToAsync("//MainPage");
+                var mainPage = Shell.Current?.CurrentPage as MainPage;
+                if (mainPage != null)
+                    await mainPage.Model.InitAsync();
             }
         }
     }

@@ -60,9 +60,8 @@ namespace RotatingTable.Xamarin.Views
                     await Model.Service.ConnectAsync(id);
             }
 
-            if (Model.Service.IsConnected)
-                await Model.InitAsync();
-            else
+            await Model.InitAsync();
+            if (!Model.IsConnected)
                 await Shell.Current.GoToAsync("//ConnectPage");
         }
 

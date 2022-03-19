@@ -10,121 +10,119 @@
         <viewmodels:MainViewModel/>
     </ContentPage.BindingContext>
     <ContentPage.Content>
-        <StackLayout>
-            <StackLayout Margin="12" IsEnabled="{Binding IsConnected}">
-                <!-- Enclose SKCanvasView in single-cell Grid. 
-                Otherwise, iOS won't get the touch events. -->
-                <Grid Grid.Row="1"
-                      HorizontalOptions="Center"
-                      IsVisible="{Binding IsRunning}"
-                      WidthRequest="500"
-                      HeightRequest="500">
-                    <skia:SKCanvasView x:Name="canvasView"
-                                       PaintSurface="OnCanvasViewPaintSurface"/>
-                    <Grid.Effects>
-                        <tt:TouchEffect Capture="True"
-                                        TouchAction="OnTouchEffectAction" />
-                    </Grid.Effects>
-                </Grid>
+        <StackLayout Margin="12" IsEnabled="{Binding IsConnected}" >
+            <!-- Enclose SKCanvasView in single-cell Grid. 
+            Otherwise, iOS won't get the touch events. -->
+            <Grid Grid.Row="1"
+                    HorizontalOptions="Center"
+                    IsVisible="{Binding IsRunning}"
+                    WidthRequest="500"
+                    HeightRequest="500">
+                <skia:SKCanvasView x:Name="canvasView"
+                                    PaintSurface="OnCanvasViewPaintSurface"/>
+                <Grid.Effects>
+                    <tt:TouchEffect Capture="True"
+                                    TouchAction="OnTouchEffectAction" />
+                </Grid.Effects>
+            </Grid>
 
-                <StackLayout Orientation="Horizontal">
-                    <Button Text="&lt;&lt;"
-                        IsVisible="{Binding ShowPWMChanging}"
-                        Pressed="IncreasePWMButton_Pressed"
-                        Released="IncreasePWMButton_Released"
-                        HorizontalOptions="FillAndExpand"/>
-                    <Button Text=">>"
-                        IsVisible="{Binding ShowPWMChanging}"
-                        Pressed="DecreasePWMButton_Pressed"
-                        Released="DecreasePWMButton_Released"
-                        HorizontalOptions="FillAndExpand"/>
-                </StackLayout>
-
-                <StackLayout Orientation="Horizontal">
-                    <Button Text="Фото"
-                        IsVisible="{Binding ShowManualButtons}"
-                        Command="{Binding PhotoCommand}"
-                        HorizontalOptions="FillAndExpand"/>
-                    <Button Text="Дальше"
-                        IsVisible="{Binding ShowManualButtons}"
-                        Command="{Binding NextCommand}"
-                        HorizontalOptions="FillAndExpand"/>
-                </StackLayout>
-
-                <Picker Title="Режим"
-                        IsEnabled="{Binding IsReady}"
-                        ItemsSource="{Binding Modes}"
-                        SelectedIndex="{Binding CurrentMode}"/>
-                <Button Text="Старт"
-                        IsVisible="{Binding IsReady}"
-                        CornerRadius="8"
-                        Command="{Binding RunCommand}"/>
-                
-                <StackLayout IsVisible="{Binding ShowSteps}">
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Количество шагов"/>
-                        <Label Text="{Binding Steps}"
-                               FontAttributes="Bold"
-                               HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray"
-                            MaximumTrackColor="Gray"
-                            ThumbColor="Blue"
-                            Maximum="21" Minimum="0"
-                            Value="{Binding StepsIndex}"
-                            DragCompletedCommand="{Binding ChangeStepsCommand}"/>
-                </StackLayout>
-                
-                <StackLayout IsVisible="{Binding ShowAcceleration}">
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Ускорение"/>
-                        <Label Text="{Binding AccelerationText}"
-                               FontAttributes="Bold"
-                               HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray"
-                            MaximumTrackColor="Gray"
-                            ThumbColor="Blue"
-                            Maximum="10" Minimum="1"
-                            Value="{Binding Acceleration}"
-                            DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
-                </StackLayout>
-                
-                <StackLayout IsVisible="{Binding ShowExposure}">
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Экспозиция"/>
-                        <Label Text="{Binding ExposureText}"
-                               FontAttributes="Bold"
-                               HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray"
-                            MaximumTrackColor="Gray"
-                            ThumbColor="Blue"
-                            Maximum="5" Minimum="1" Value="{Binding Exposure}"
-                            DragCompletedCommand="{Binding ChangeExposureCommand}"/>
-                </StackLayout>
-                
-                <StackLayout IsVisible="{Binding ShowDelay}">
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Задержка"/>
-                        <Label Text="{Binding DelayText}"
-                               FontAttributes="Bold"
-                               HorizontalOptions="EndAndExpand"/>
-                    </StackLayout>
-                    <Slider MinimumTrackColor="Gray"
-                            MaximumTrackColor="Gray"
-                            ThumbColor="Blue"
-                            Maximum="50" Minimum="0" Value="{Binding Delay}"
-                            DragCompletedCommand="{Binding ChangeDelayCommand}"/>
-                </StackLayout>
-                
-                <Button Text="{Binding StopButtonText}"
-                        IsVisible="{Binding IsRunning}"
-                        CornerRadius="8"
-                        BackgroundColor="Red"
-                        Command="{Binding StopCommand}"
-                        Pressed="StopButton_Pressed"/>
+            <StackLayout Orientation="Horizontal">
+                <Button Text="&lt;&lt;"
+                    IsVisible="{Binding ShowPWMChanging}"
+                    Pressed="IncreasePWMButton_Pressed"
+                    Released="IncreasePWMButton_Released"
+                    HorizontalOptions="FillAndExpand"/>
+                <Button Text=">>"
+                    IsVisible="{Binding ShowPWMChanging}"
+                    Pressed="DecreasePWMButton_Pressed"
+                    Released="DecreasePWMButton_Released"
+                    HorizontalOptions="FillAndExpand"/>
             </StackLayout>
+
+            <StackLayout Orientation="Horizontal">
+                <Button Text="Фото"
+                    IsVisible="{Binding ShowManualButtons}"
+                    Command="{Binding PhotoCommand}"
+                    HorizontalOptions="FillAndExpand"/>
+                <Button Text="Дальше"
+                    IsVisible="{Binding ShowManualButtons}"
+                    Command="{Binding NextCommand}"
+                    HorizontalOptions="FillAndExpand"/>
+            </StackLayout>
+
+            <Picker Title="Режим"
+                    IsEnabled="{Binding IsReady}"
+                    ItemsSource="{Binding Modes}"
+                    SelectedIndex="{Binding CurrentMode}"/>
+            <Button Text="Старт"
+                    IsVisible="{Binding IsReady}"
+                    CornerRadius="8"
+                    Command="{Binding RunCommand}"/>
+                
+            <StackLayout IsVisible="{Binding ShowSteps}">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Количество шагов"/>
+                    <Label Text="{Binding Steps}"
+                            FontAttributes="Bold"
+                            HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="21" Minimum="0"
+                        Value="{Binding StepsIndex}"
+                        DragCompletedCommand="{Binding ChangeStepsCommand}"/>
+            </StackLayout>
+                
+            <StackLayout IsVisible="{Binding ShowAcceleration}">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Ускорение"/>
+                    <Label Text="{Binding AccelerationText}"
+                            FontAttributes="Bold"
+                            HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="10" Minimum="1"
+                        Value="{Binding Acceleration}"
+                        DragCompletedCommand="{Binding ChangeAccelerationCommand}"/>
+            </StackLayout>
+                
+            <StackLayout IsVisible="{Binding ShowExposure}">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Экспозиция"/>
+                    <Label Text="{Binding ExposureText}"
+                            FontAttributes="Bold"
+                            HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="5" Minimum="1" Value="{Binding Exposure}"
+                        DragCompletedCommand="{Binding ChangeExposureCommand}"/>
+            </StackLayout>
+                
+            <StackLayout IsVisible="{Binding ShowDelay}">
+                <StackLayout Orientation="Horizontal">
+                    <Label Text="Задержка"/>
+                    <Label Text="{Binding DelayText}"
+                            FontAttributes="Bold"
+                            HorizontalOptions="EndAndExpand"/>
+                </StackLayout>
+                <Slider MinimumTrackColor="Gray"
+                        MaximumTrackColor="Gray"
+                        ThumbColor="Blue"
+                        Maximum="50" Minimum="0" Value="{Binding Delay}"
+                        DragCompletedCommand="{Binding ChangeDelayCommand}"/>
+            </StackLayout>
+                
+            <Button Text="{Binding StopButtonText}"
+                    IsVisible="{Binding IsRunning}"
+                    CornerRadius="8"
+                    BackgroundColor="Red"
+                    Command="{Binding StopCommand}"
+                    Pressed="StopButton_Pressed"/>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
