@@ -325,9 +325,18 @@ namespace RotatingTable.Xamarin.Services
                 !await SetAccelerationAsync(acceleration) ||
                 !await SetDelayAsync(delay) ||
                 !await SetExposureAsync(exposure) ||
-                !await SetVideoPWMAsync(videoPwm) ||
                 !await SetNonstopFrequencyAsync(nonstopFrequency))
                 return false;
+
+            if (!await SetVideoPWMAsync(videoPwm))
+            {
+                // Current videoPwm can be invalid for this table
+                // try to use default
+                if (await SetVideoPWMAsync(ConfigValidator.DefaultVideoPWMValue))
+                    videoPwm = ConfigValidator.DefaultVideoPWMValue;
+                else
+                    return false;
+            }
 
             await config.SetStepsAsync(steps);
             await config.SetAccelerationAsync(acceleration);

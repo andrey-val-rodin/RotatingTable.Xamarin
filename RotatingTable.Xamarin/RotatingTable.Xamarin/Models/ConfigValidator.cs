@@ -18,7 +18,7 @@ namespace RotatingTable.Xamarin.Models
         public const int DefaultAccelerationValue = 7;
         public const int DefaultDelayValue = 0;
         public const int DefaultExposureValue = 100;
-        public const int DefaultVideoPWMValue = 100;
+        public const int DefaultVideoPWMValue = 80;
         public const float DefaultNonstopFrequencyValue = 0.5F;
 
         public static bool IsStepsValid(int value)
