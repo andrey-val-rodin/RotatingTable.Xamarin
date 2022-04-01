@@ -21,7 +21,7 @@
 	<key>MinimumOSVersion</key>
 	<string>8.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>Rotating Table</string>
+	<string>Поворотный стол</string>
 	<key>CFBundleIdentifier</key>
 	<string>RotatingTable.Xamarin</string>
 	<key>CFBundleVersion</key>
