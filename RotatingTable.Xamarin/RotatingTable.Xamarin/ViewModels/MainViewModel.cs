@@ -278,6 +278,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private async Task RunAsync()
         {
             await _semaphore.WaitAsync();
+            CurrentPos = 0;
             try
             {
                 switch (CurrentMode)

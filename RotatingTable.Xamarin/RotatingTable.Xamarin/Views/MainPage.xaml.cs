@@ -23,6 +23,7 @@ namespace RotatingTable.Xamarin.Views
         private readonly Selector _selector;
         private readonly IUserDialogs _userDialogs;
         private CancellationTokenSource _tokenSource;
+        private CancellationTokenSource _alertSource;
 
         public MainPage()
         {
@@ -106,12 +107,31 @@ namespace RotatingTable.Xamarin.Views
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
-                await _userDialogs.AlertAsync("Соединение со столом разорвано");
-                await Model.Service.DisconnectAsync();
-                Model.IsRunning = false;
-                Model.IsConnected = false;
-                _selector.Clear();
-                await Shell.Current.GoToAsync("//ConnectPage");
+                try
+                {
+                    await Model.Service.DisconnectAsync();
+                    Model.IsRunning = false;
+                    Model.IsConnected = false;
+                    _selector.Clear();
+
+                    if (_alertSource != null)
+                        _alertSource.Cancel();
+
+                    if (Shell.Current.CurrentState.Location.ToString() != "//ConnectPage")
+                    {
+                        _alertSource = new CancellationTokenSource();
+                        await _userDialogs.AlertAsync("Соединение со столом разорвано",
+                            cancelToken: _alertSource.Token);
+
+                        await Shell.Current.GoToAsync("//ConnectPage");
+                    }
+                }
+                catch (TaskCanceledException) { }
+                finally
+                {
+                    _alertSource?.Dispose();
+                    _alertSource = null;
+                }
             });
         }
 
@@ -120,12 +140,28 @@ namespace RotatingTable.Xamarin.Views
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
-                await _userDialogs.AlertAsync("Превышено время ожидания ответа от стола в процессе работы");
-                await Model.Service.DisconnectAsync();
-                Model.IsRunning = false;
-                Model.IsConnected = false;
-                _selector.Clear();
-                await Shell.Current.GoToAsync("//ConnectPage");
+                try
+                {
+                    await Model.Service.DisconnectAsync();
+                    Model.IsRunning = false;
+                    Model.IsConnected = false;
+                    _selector.Clear();
+
+                    if (_alertSource != null)
+                        _alertSource.Cancel();
+
+                    _alertSource = new CancellationTokenSource();
+                    await _userDialogs.AlertAsync("Превышено время ожидания ответа от стола в процессе работы",
+                            cancelToken: _alertSource.Token);
+
+                    await Shell.Current.GoToAsync("//ConnectPage");
+                }
+                catch (TaskCanceledException) { }
+                finally
+                {
+                    _alertSource?.Dispose();
+                    _alertSource = null;
+                }
             });
         }
 
