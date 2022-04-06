@@ -332,6 +332,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 IsRunning = false;
                 CurrentStep = 0;
                 CurrentPos = 0;
+                Stop?.Invoke(this, EventArgs.Empty);
             }
         }
 

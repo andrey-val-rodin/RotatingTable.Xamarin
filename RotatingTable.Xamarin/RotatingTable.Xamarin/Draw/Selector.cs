@@ -37,8 +37,7 @@ namespace RotatingTable.Xamarin.Draw
         {
             foreach (var drawer in _drawers)
             {
-                if (drawer != null)
-                    drawer.Clear();
+                drawer?.Clear();
             }
         }
     }

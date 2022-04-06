@@ -135,7 +135,6 @@ namespace RotatingTable.Xamarin.Views
             });
         }
 
-
         private void ServiceTimeout(object sender, ElapsedEventArgs args)
         {
             MainThread.BeginInvokeOnMainThread(async () =>
