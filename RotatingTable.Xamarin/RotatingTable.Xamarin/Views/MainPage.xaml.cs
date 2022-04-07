@@ -24,6 +24,7 @@ namespace RotatingTable.Xamarin.Views
         private readonly IUserDialogs _userDialogs;
         private CancellationTokenSource _tokenSource;
         private CancellationTokenSource _alertSource;
+        private int _delay;
 
         public MainPage()
         {
@@ -173,6 +174,7 @@ namespace RotatingTable.Xamarin.Views
             _tokenSource?.Cancel();
             _tokenSource = new();
             var token = _tokenSource.Token;
+            _delay = 200;
 
             Task.Run(async () =>
             {
@@ -189,7 +191,9 @@ namespace RotatingTable.Xamarin.Views
                         if (token.IsCancellationRequested)
                             break;
 
-                        await Task.Delay(200, token);
+                        await Task.Delay(_delay, token);
+                        if (_delay > 100)
+                            _delay -= 5;
                     }
                 }
                 catch { }
@@ -215,6 +219,7 @@ namespace RotatingTable.Xamarin.Views
             _tokenSource?.Cancel();
             _tokenSource = new();
             var token = _tokenSource.Token;
+            _delay = 200;
 
             Task.Run(async () =>
             {
@@ -231,7 +236,9 @@ namespace RotatingTable.Xamarin.Views
                         if (token.IsCancellationRequested)
                             break;
 
-                        await Task.Delay(200, token);
+                        await Task.Delay(_delay, token);
+                        if (_delay > 100)
+                            _delay -= 5;
                     }
                 }
                 catch { }
