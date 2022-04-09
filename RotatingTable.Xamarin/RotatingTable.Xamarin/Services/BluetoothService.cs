@@ -20,9 +20,8 @@ namespace RotatingTable.Xamarin.Services
 {
     public class BluetoothService : IBluetoothService
     {
-        private static readonly Guid ServiceUuid = new("000018f0-0000-1000-8000-00805f9b34fb");
-        private static readonly Guid UpdatesCharacteristicUuid = new("00002af0-0000-1000-8000-00805f9b34fb");
-        private static readonly Guid WriteCharacteristicUuid = new("00002af1-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid UpdatesCharacteristicUuid = new("0000ffe1-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid WriteCharacteristicUuid   = new("0000ffe2-0000-1000-8000-00805f9b34fb");
 
         public const char Terminator = '\n';
 
@@ -75,15 +74,7 @@ namespace RotatingTable.Xamarin.Services
                 if (device == null)
                     return false;
 
-                // Get service
-                var service = await LoadService(device, tokenSource.Token);
-                if (service == null)
-                {
-                    error = $"Сервис {ServiceUuid} не найден";
-                    return false;
-                }
-
-                if (!await LoadCharacteristics(service))
+                if (!await LoadCharacteristics(device, tokenSource.Token))
                 {
                     error = "Характеристика не обнаружена";
                     return false;
@@ -215,38 +206,33 @@ namespace RotatingTable.Xamarin.Services
             };
         }
 
-        private async Task<IService> LoadService(IDevice device, CancellationToken token)
+        private async Task<bool> LoadCharacteristics(IDevice device, CancellationToken token)
         {
             try
             {
+                UpdatesCharacteristic = null;
+                WriteCharacteristic = null;
                 var services = await device.GetServicesAsync(token);
-                return services.FirstOrDefault(s => s.Id == ServiceUuid);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(ex.Message);
-                return null;
-            }
-        }
+                foreach (var service in services)
+                {
+                    var characteristics = await service.GetCharacteristicsAsync();
+                    if (UpdatesCharacteristic == null)
+                        UpdatesCharacteristic = characteristics.FirstOrDefault(c => c.Id == UpdatesCharacteristicUuid);
+                    if (WriteCharacteristic == null)
+                        WriteCharacteristic = characteristics.FirstOrDefault(c => c.Id == WriteCharacteristicUuid);
 
-        private async Task<bool> LoadCharacteristics(IService service)
-        {
-            try
-            {
-                var characteristics = await service.GetCharacteristicsAsync();
-                UpdatesCharacteristic = characteristics.FirstOrDefault(c => c.Id == UpdatesCharacteristicUuid);
-                if (UpdatesCharacteristic == null)
+                    if (UpdatesCharacteristic != null && WriteCharacteristic != null)
+                        break;
+                }
+
+                if (UpdatesCharacteristic == null || WriteCharacteristic == null)
                     return false;
 
-                // Start listening from characteristic
+                // Start listening from update characteristic
                 IsConnected = true;
                 _stream = new();
                 UpdatesCharacteristic.ValueUpdated += CharacteristicListeningHandler;
                 await UpdatesCharacteristic.StartUpdatesAsync();
-
-                WriteCharacteristic = characteristics.FirstOrDefault(c => c.Id == WriteCharacteristicUuid);
-                if (WriteCharacteristic == null)
-                    return false;
 
                 WriteCharacteristic.WriteType = CharacteristicWriteType.WithoutResponse;
                 return true;
