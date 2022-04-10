@@ -157,7 +157,7 @@ namespace RotatingTable.Xamarin.Services
 
         private void CharacteristicListeningHandler(object sender, CharacteristicUpdatedEventArgs args)
         {
-            _stream.Append(args.Characteristic.Value);
+            _stream?.Append(args.Characteristic.Value);
         }
 
         private async Task<IDevice> ConnectToDeviceAsync(Guid id, CancellationToken token)
@@ -406,7 +406,8 @@ namespace RotatingTable.Xamarin.Services
             }
             finally
             {
-                _stream.TokenUpdated -= handler;
+                if (_stream != null)
+                    _stream.TokenUpdated -= handler;
             }
         }
 
@@ -447,7 +448,8 @@ namespace RotatingTable.Xamarin.Services
             }
             finally
             {
-                _stream.TokenUpdated -= handler;
+                if (_stream != null)
+                    _stream.TokenUpdated -= handler;
             }
         }
 
@@ -485,7 +487,8 @@ namespace RotatingTable.Xamarin.Services
             }
             finally
             {
-                _stream.TokenUpdated -= handler;
+                if (_stream != null)
+                    _stream.TokenUpdated -= handler;
             }
         }
 
@@ -513,8 +516,11 @@ namespace RotatingTable.Xamarin.Services
 
         private void EndListening()
         {
-            _stream.TokenUpdated -= _streamTokenHandler;
-            _stream.TokenUpdated -= _listeningHandler;
+            if (_stream != null)
+            {
+                _stream.TokenUpdated -= _streamTokenHandler;
+                _stream.TokenUpdated -= _listeningHandler;
+            }
             _streamTokenHandler = null;
             _timer.Stop();
             IsListening = false;
@@ -716,7 +722,9 @@ namespace RotatingTable.Xamarin.Services
                 _timer2.Dispose();
                 _timer2 = null;
             }
-            _stream.TokenUpdated -= WaitingHandler;
+
+            if (_stream != null)
+                _stream.TokenUpdated -= WaitingHandler;
         }
 
         public async Task<bool> SetStepsAsync(int steps)
