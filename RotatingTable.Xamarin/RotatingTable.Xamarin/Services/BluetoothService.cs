@@ -37,6 +37,7 @@ namespace RotatingTable.Xamarin.Services
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly System.Timers.Timer _timer;
         private System.Timers.Timer _timer2;
+        private readonly AutoResetEvent _waitingEvent = new AutoResetEvent(false);
 
         public BluetoothService(IUserDialogs userDialogs)
         {
@@ -234,7 +235,6 @@ namespace RotatingTable.Xamarin.Services
                 UpdatesCharacteristic.ValueUpdated += CharacteristicListeningHandler;
                 await UpdatesCharacteristic.StartUpdatesAsync();
 
-                WriteCharacteristic.WriteType = CharacteristicWriteType.WithoutResponse;
                 return true;
             }
             catch (Exception ex)
@@ -386,6 +386,7 @@ namespace RotatingTable.Xamarin.Services
         {
             System.Diagnostics.Debug.WriteLine($"Command: {command}");
 
+            _stringResponse = null;
             _stream.TokenUpdated += handler;
             try
             {
@@ -396,33 +397,17 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                return await GetStringResponseAsync();
+                _waitingEvent.WaitOne(1000);
+
+                if (string.IsNullOrEmpty(_stringResponse))
+                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+                return _stringResponse;
             }
             finally
             {
                 _stream.TokenUpdated -= handler;
             }
-        }
-
-        private async Task<string> GetStringResponseAsync()
-        {
-            _stringResponse = null;
-            var token = new CancellationTokenSource(1000).Token;
-            string response = await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (!string.IsNullOrEmpty(_stringResponse) || token.IsCancellationRequested)
-                        return _stringResponse;
-
-                    await Task.Delay(5);
-                }
-            }, token);
-
-            if (string.IsNullOrEmpty(response))
-                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-
-            return response;
         }
 
         private void CommandHandler(object sender, DeviceInputEventArgs args)
@@ -432,13 +417,17 @@ namespace RotatingTable.Xamarin.Services
                 return;
 
             if (_acceptedTokens.Contains(args.Text))
+            {
                 _stringResponse = args.Text;
+                _waitingEvent.Set();
+            }
         }
 
         private async Task<int?> ListenForInt(string command, EventHandler<DeviceInputEventArgs> handler)
         {
             System.Diagnostics.Debug.WriteLine($"Command: {command}");
 
+            _intResponse = null;
             _stream.TokenUpdated += handler;
             try
             {
@@ -449,33 +438,17 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                return await GetIntResponseAsync();
+                _waitingEvent.WaitOne(500);
+
+                if (_intResponse == null)
+                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+                return _intResponse;
             }
             finally
             {
                 _stream.TokenUpdated -= handler;
             }
-        }
-
-        private async Task<int?> GetIntResponseAsync()
-        {
-            _intResponse = null;
-            var token = new CancellationTokenSource(500).Token;
-            int? response = await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (_intResponse != null || token.IsCancellationRequested)
-                        return _intResponse;
-
-                    await Task.Delay(5);
-                }
-            }, token);
-
-            if (response == null)
-                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-
-            return response;
         }
 
         private void IntHandler(object sender, DeviceInputEventArgs args)
@@ -492,6 +465,7 @@ namespace RotatingTable.Xamarin.Services
         {
             System.Diagnostics.Debug.WriteLine($"Command: {command}");
 
+            _floatResponse = null;
             _stream.TokenUpdated += handler;
             try
             {
@@ -502,7 +476,12 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                return await GetFloatResponseAsync();
+                _waitingEvent.WaitOne(500);
+
+                if (_floatResponse == null)
+                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+
+                return _floatResponse;
             }
             finally
             {
@@ -510,27 +489,6 @@ namespace RotatingTable.Xamarin.Services
             }
         }
 
-        private async Task<float?> GetFloatResponseAsync()
-        {
-            _floatResponse = null;
-            var token = new CancellationTokenSource(500).Token;
-            float? response = await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (_floatResponse != null || token.IsCancellationRequested)
-                        return _floatResponse;
-
-                    await Task.Delay(5);
-                }
-            }, token);
-
-            if (response == null)
-                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-
-            return response;
-        }
-        
         private void FloatHandler(object sender, DeviceInputEventArgs args)
         {
             // Take only first accepted token
