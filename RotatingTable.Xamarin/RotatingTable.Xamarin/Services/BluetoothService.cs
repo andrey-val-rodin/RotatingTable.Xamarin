@@ -397,7 +397,7 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                _waitingEvent.WaitOne(1000);
+                await Task.Run(() => _waitingEvent.WaitOne(1000));
 
                 if (string.IsNullOrEmpty(_stringResponse))
                     await _userDialogs.AlertAsync("Превышено время ожидания ответа");
@@ -439,7 +439,7 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                _waitingEvent.WaitOne(500);
+                await Task.Run(() => _waitingEvent.WaitOne(500));
 
                 if (_intResponse == null)
                     await _userDialogs.AlertAsync("Превышено время ожидания ответа");
@@ -478,7 +478,7 @@ namespace RotatingTable.Xamarin.Services
                     await WriteCharacteristic.WriteAsync(Encoding.ASCII.GetBytes(command))))
                     return null;
 
-                _waitingEvent.WaitOne(500);
+                await Task.Run(() => _waitingEvent.WaitOne(500));
 
                 if (_floatResponse == null)
                     await _userDialogs.AlertAsync("Превышено время ожидания ответа");
