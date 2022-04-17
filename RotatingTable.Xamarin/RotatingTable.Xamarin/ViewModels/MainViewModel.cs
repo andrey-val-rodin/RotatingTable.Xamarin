@@ -221,7 +221,7 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             get
             {
-                lock(_locker)
+                lock (_locker)
                 {
                     return _changingPWM;
                 }

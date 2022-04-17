@@ -37,7 +37,7 @@ namespace RotatingTable.Xamarin.Services
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly System.Timers.Timer _timer;
         private System.Timers.Timer _timer2;
-        private readonly AutoResetEvent _waitingEvent = new AutoResetEvent(false);
+        private readonly AutoResetEvent _waitingEvent = new(false);
 
         public BluetoothService(IUserDialogs userDialogs)
         {
@@ -776,7 +776,7 @@ namespace RotatingTable.Xamarin.Services
             return await WriteCommandAndGetResponseAsync(command,
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
         }
-        
+
         public async Task<bool> SetNonstopFrequencyAsync(float nonstopFrequency)
         {
             if (!IsConnected)

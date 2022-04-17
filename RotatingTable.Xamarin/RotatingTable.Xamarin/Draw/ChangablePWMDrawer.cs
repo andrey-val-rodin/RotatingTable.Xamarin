@@ -1,7 +1,5 @@
 ﻿using RotatingTable.Xamarin.ViewModels;
-using SkiaSharp;
 using SkiaSharp.Views.Forms;
-using Xamarin.Forms;
 
 namespace RotatingTable.Xamarin.Draw
 {
