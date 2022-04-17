@@ -407,7 +407,7 @@ namespace RotatingTable.Xamarin.ViewModels
                     }
                     else
                     {
-                        Service.CancelWaitingForStop();
+                        Service.EndWaitingForStop();
                         await Service.StopAsync();
                         IsSoftStopping = false;
                         IsRunning = false;

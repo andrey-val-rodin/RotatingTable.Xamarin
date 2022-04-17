@@ -697,7 +697,7 @@ namespace RotatingTable.Xamarin.Services
             _timer2.Elapsed += async (s, a) =>
             {
                 await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-                CancelWaitingForStop();
+                EndWaitingForStop();
                 onTimeout?.Invoke(this, EventArgs.Empty);
             };
             _timer2.Start();
@@ -705,16 +705,7 @@ namespace RotatingTable.Xamarin.Services
             _stream.TokenUpdated += WaitingHandler;
         }
 
-        private void WaitingHandler(object sender, DeviceInputEventArgs args)
-        {
-            if (args.Text == Commands.End)
-            {
-                CancelWaitingForStop();
-                _waitingEventHandler?.Invoke(this, EventArgs.Empty);
-            }
-        }
-
-        public void CancelWaitingForStop()
+        public void EndWaitingForStop()
         {
             if (_timer2 != null)
             {
@@ -725,6 +716,15 @@ namespace RotatingTable.Xamarin.Services
 
             if (_stream != null)
                 _stream.TokenUpdated -= WaitingHandler;
+        }
+
+        private void WaitingHandler(object sender, DeviceInputEventArgs args)
+        {
+            if (args.Text == Commands.End)
+            {
+                EndWaitingForStop();
+                _waitingEventHandler?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public async Task<bool> SetStepsAsync(int steps)
