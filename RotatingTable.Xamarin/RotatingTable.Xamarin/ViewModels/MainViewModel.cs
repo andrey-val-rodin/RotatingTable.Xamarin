@@ -194,7 +194,10 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public bool ShowSteps
         {
-            get => !IsRunning;
+            get => !IsRunning ||
+                CurrentMode == (int)Mode.Auto ||
+                CurrentMode == (int)Mode.Manual ||
+                CurrentMode == (int)Mode.Nonstop;
         }
 
         public bool ShowAcceleration

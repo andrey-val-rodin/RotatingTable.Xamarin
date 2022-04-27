@@ -58,10 +58,11 @@
                     IsVisible="{Binding IsReady}"
                     CornerRadius="8"
                     Command="{Binding RunCommand}"/>
-                
-            <StackLayout IsVisible="{Binding ShowSteps}">
+
+            <StackLayout IsVisible="{Binding ShowSteps}"
+                         IsEnabled="{Binding IsReady}">
                 <StackLayout Orientation="Horizontal">
-                    <Label Text="Количество шагов"/>
+                    <Label Text="Шаги"/>
                     <Label Text="{Binding Steps}"
                             FontAttributes="Bold"
                             HorizontalOptions="EndAndExpand"/>
@@ -76,7 +77,7 @@
                 
             <StackLayout IsVisible="{Binding ShowAcceleration}">
                 <StackLayout Orientation="Horizontal">
-                    <Label Text="Ускорение"/>
+                    <Label Text="Скорость"/>
                     <Label Text="{Binding AccelerationText}"
                             FontAttributes="Bold"
                             HorizontalOptions="EndAndExpand"/>
