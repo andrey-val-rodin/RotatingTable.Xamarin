@@ -131,21 +131,12 @@ namespace RotatingTable.Xamarin.ViewModels
         {
             get
             {
-                switch (CurrentMode)
+                return CurrentMode switch
                 {
-                    case (int)Mode.Auto:
-                    case (int)Mode.Manual:
-                    case (int)Mode.Nonstop:
-                        return $"{Modes[CurrentMode]} ({Steps})";
-
-                    case (int)Mode.Rotate90:
-                    case (int)Mode.FreeMovement:
-                    case (int)Mode.Video:
-                        return Modes[CurrentMode];
-
-                    default:
-                        throw new InvalidOperationException($"Invalid CurrentMode: {CurrentMode}");
-                }
+                    (int)Mode.Auto or (int)Mode.Manual or (int)Mode.Nonstop => $"{Modes[CurrentMode]} ({Steps})",
+                    (int)Mode.Rotate90 or (int)Mode.FreeMovement or (int)Mode.Video => Modes[CurrentMode],
+                    _ => throw new InvalidOperationException($"Invalid CurrentMode: {CurrentMode}"),
+                };
             }
         }
 
