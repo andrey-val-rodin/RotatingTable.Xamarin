@@ -11,6 +11,16 @@
     </ContentPage.BindingContext>
     <ContentPage.Content>
         <StackLayout Margin="12" IsEnabled="{Binding IsConnected}" >
+            <Label IsVisible="{Binding IsRunning}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Режим:" FontAttributes="Bold"/>
+                        <Span Text="  "/>
+                        <Span Text="{Binding Info}"/>
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+
             <!-- Enclose SKCanvasView in single-cell Grid. 
             Otherwise, iOS won't get the touch events. -->
             <Grid Grid.Row="1"
@@ -51,7 +61,7 @@
             </StackLayout>
 
             <Picker Title="Режим"
-                    IsEnabled="{Binding IsReady}"
+                    IsVisible="{Binding IsReady}"
                     ItemsSource="{Binding Modes}"
                     SelectedIndex="{Binding CurrentMode}"/>
             <Button Text="Старт"

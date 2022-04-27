@@ -73,6 +73,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 if (SetProperty(ref _isRunning, value))
                 {
                     OnPropertyChanged("IsReady");
+                    OnPropertyChanged(nameof(Info));
                     OnPropertyChanged(nameof(ShowPWMChanging));
                     OnPropertyChanged(nameof(ShowManualButtons));
                     OnPropertyChanged(nameof(ShowSteps));
@@ -123,6 +124,28 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 if (SetProperty(ref _stepsIndex, value))
                     OnPropertyChanged(nameof(Steps));
+            }
+        }
+
+        public string Info
+        {
+            get
+            {
+                switch (CurrentMode)
+                {
+                    case (int)Mode.Auto:
+                    case (int)Mode.Manual:
+                    case (int)Mode.Nonstop:
+                        return $"{Modes[CurrentMode]} ({Steps})";
+
+                    case (int)Mode.Rotate90:
+                    case (int)Mode.FreeMovement:
+                    case (int)Mode.Video:
+                        return Modes[CurrentMode];
+
+                    default:
+                        throw new InvalidOperationException($"Invalid CurrentMode: {CurrentMode}");
+                }
             }
         }
 
@@ -194,10 +217,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         public bool ShowSteps
         {
-            get => !IsRunning ||
-                CurrentMode == (int)Mode.Auto ||
-                CurrentMode == (int)Mode.Manual ||
-                CurrentMode == (int)Mode.Nonstop;
+            get => !IsRunning;
         }
 
         public bool ShowAcceleration
