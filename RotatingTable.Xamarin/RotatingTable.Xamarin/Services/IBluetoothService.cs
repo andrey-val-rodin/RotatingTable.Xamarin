@@ -27,8 +27,6 @@ namespace RotatingTable.Xamarin.Services
         Task<bool> NextAsync(EventHandler<DeviceInputEventArgs> eventHandler);
         Task<bool> StopAsync();
         Task<bool> SoftStopAsync();
-        void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout);
-        void EndWaitingForStop();
         Task<bool> SetStepsAsync(int steps);
         Task<bool> SetAccelerationAsync(int acceleration);
         Task<bool> SetDelayAsync(int delay);

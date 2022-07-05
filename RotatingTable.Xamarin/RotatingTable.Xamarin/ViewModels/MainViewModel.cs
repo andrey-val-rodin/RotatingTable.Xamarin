@@ -1,4 +1,5 @@
-﻿using RotatingTable.Xamarin.Handlers;
+﻿using Acr.UserDialogs;
+using RotatingTable.Xamarin.Handlers;
 using RotatingTable.Xamarin.Models;
 using RotatingTable.Xamarin.Services;
 using System;
@@ -29,6 +30,7 @@ namespace RotatingTable.Xamarin.ViewModels
         private bool _isSoftStopping;
         private bool _performingManualStep;
         private ChangePWM _changingPWM = ChangePWM.None;
+        private System.Timers.Timer _timer;
         private readonly object _locker = new();
 
         public MainViewModel()
@@ -80,6 +82,9 @@ namespace RotatingTable.Xamarin.ViewModels
                     OnPropertyChanged(nameof(ShowAcceleration));
                     OnPropertyChanged(nameof(ShowExposure));
                     OnPropertyChanged(nameof(ShowDelay));
+
+                    if (!value)
+                        IsSoftStopping = false;
                 }
             }
         }
@@ -298,7 +303,7 @@ namespace RotatingTable.Xamarin.ViewModels
                 switch (CurrentMode)
                 {
                     case (int)Mode.Auto:
-                        IsRunning = await Service.RunAutoAsync((s, a) => OnDataReseived(a.Text));
+                        IsRunning = await Service.RunAutoAsync(async (s, a) => await OnDataReseived(a.Text));
                         break;
 
                     case (int)Mode.Manual:
@@ -317,7 +322,7 @@ namespace RotatingTable.Xamarin.ViewModels
                         break;
 
                     case (int)Mode.Video:
-                        IsRunning = await Service.RunVideoAsync((s, a) => OnDataReseived(a.Text));
+                        IsRunning = await Service.RunVideoAsync(async (s, a) => await OnDataReseived(a.Text));
                         break;
 
                     default:
@@ -330,7 +335,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        public void OnDataReseived(string text)
+        public async Task OnDataReseived(string text)
         {
             if (text.StartsWith(Commands.Step))
             {
@@ -347,6 +352,16 @@ namespace RotatingTable.Xamarin.ViewModels
                 CurrentStep = 0;
                 CurrentPos = 0;
                 Stop?.Invoke(this, EventArgs.Empty);
+
+                if (IsSoftStopping)
+                {
+                    await FinishWaiting();
+
+                    // Store current PWM
+                    var videoPWM = await Service.GetVideoPWMAsync();
+                    if (videoPWM != null)
+                        await Config.SetVideoPWMAsync(videoPWM.Value);
+                }
             }
         }
 
@@ -388,45 +403,30 @@ namespace RotatingTable.Xamarin.ViewModels
                 {
                     if (!IsSoftStopping)
                     {
+                        IsSoftStopping = true;
                         if (!await Service.SoftStopAsync())
                         {
                             await Service.StopAsync();
+                            IsRunning = false;
+                            Stop?.Invoke(this, EventArgs.Empty);
                             return;
                         }
 
-                        IsSoftStopping = true;
-                        Service.BeginWaitingForStop(
-                            async (s, a) =>
+                        _timer = new System.Timers.Timer(5000) { AutoReset = false };
+                        _timer.Elapsed += async (s, a) =>
+                        {
+                            // If table is still running and we are waiting for soft stop
+                            if (IsRunning && IsSoftStopping)
                             {
-                                IsSoftStopping = false;
-                                IsRunning = false;
-                                Stop?.Invoke(this, EventArgs.Empty);
-
-                                // Store current PWM
-                                var videoPWM = await Service.GetVideoPWMAsync();
-                                if (videoPWM != null)
-                                    await Config.SetVideoPWMAsync(videoPWM.Value);
-                            },
-                            async (s, a) =>
-                            {
-                                IsSoftStopping = false;
-                                IsRunning = false;
-                                await Service.StopAsync();
-                                bool ready = await Service.GetStatusAsync() == Commands.Ready;
-                                if (ready)
-                                    Stop?.Invoke(this, EventArgs.Empty);
-                                else
-                                    WaitingTimeout?.Invoke(this, EventArgs.Empty);
-                            });
+                                // Warn the user and fire WaitingTimeout event
+                                await UserDialogs.Instance.AlertAsync("Превышено время ожидания остановки стола");
+                                WaitingTimeout?.Invoke(this, EventArgs.Empty);
+                            }
+                        };
+                        _timer.Start();
                     }
                     else
-                    {
-                        Service.EndWaitingForStop();
-                        await Service.StopAsync();
-                        IsSoftStopping = false;
-                        IsRunning = false;
-                        Stop?.Invoke(this, EventArgs.Empty);
-                    }
+                        await FinishWaiting();
                 }
                 else
                 {
@@ -439,6 +439,17 @@ namespace RotatingTable.Xamarin.ViewModels
             {
                 _semaphore.Release();
             }
+        }
+
+        private async Task FinishWaiting()
+        {
+            _timer?.Stop();
+            _timer?.Dispose();
+            _timer = null;
+
+            await Service.StopAsync();
+            IsRunning = false;
+            Stop?.Invoke(this, EventArgs.Empty);
         }
 
         private async Task NextAsync()

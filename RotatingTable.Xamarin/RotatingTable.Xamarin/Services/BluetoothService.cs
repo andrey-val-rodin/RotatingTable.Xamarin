@@ -32,11 +32,9 @@ namespace RotatingTable.Xamarin.Services
         private ListeningStream _stream;
         private EventHandler<DeviceInputEventArgs> _streamTokenHandler;
         private EventHandler<DeviceInputEventArgs> _listeningHandler;
-        private StopEventHandler _waitingEventHandler;
         private readonly List<string> _acceptedTokens = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly System.Timers.Timer _timer;
-        private System.Timers.Timer _timer2;
         private readonly AutoResetEvent _waitingEvent = new(false);
 
         public BluetoothService(IUserDialogs userDialogs)
@@ -280,7 +278,7 @@ namespace RotatingTable.Xamarin.Services
                 if (!await StopAsync())
                 {
                     IsConnected = false;
-                    return "Перегрузите стол и повторите попытку подключения позже";
+                    return "Перезагрузите стол и повторите попытку подключения позже";
                 }
 
                 response = await GetStatusAsync();
@@ -688,43 +686,6 @@ namespace RotatingTable.Xamarin.Services
                 new[] { Commands.OK, Commands.Error }) == Commands.OK;
 
             return result;
-        }
-
-        public void BeginWaitingForStop(StopEventHandler onStop, StopEventHandler onTimeout)
-        {
-            _waitingEventHandler = onStop;
-            _timer2 = new System.Timers.Timer(5000) { AutoReset = false };
-            _timer2.Elapsed += async (s, a) =>
-            {
-                await _userDialogs.AlertAsync("Превышено время ожидания ответа");
-                EndWaitingForStop();
-                onTimeout?.Invoke(this, EventArgs.Empty);
-            };
-            _timer2.Start();
-
-            _stream.TokenUpdated += WaitingHandler;
-        }
-
-        public void EndWaitingForStop()
-        {
-            if (_timer2 != null)
-            {
-                _timer2.Stop();
-                _timer2.Dispose();
-                _timer2 = null;
-            }
-
-            if (_stream != null)
-                _stream.TokenUpdated -= WaitingHandler;
-        }
-
-        private void WaitingHandler(object sender, DeviceInputEventArgs args)
-        {
-            if (args.Text == Commands.End)
-            {
-                EndWaitingForStop();
-                _waitingEventHandler?.Invoke(this, EventArgs.Empty);
-            }
         }
 
         public async Task<bool> SetStepsAsync(int steps)
