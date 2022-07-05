@@ -28,6 +28,10 @@ namespace RotatingTable.Xamarin.Views
             if (e.SelectedItem is not DeviceItem item)
                 return;
 
+            var mainPage = DependencyService.Resolve<MainPage>();
+            mainPage.Model.IsRunning = false;
+            mainPage.ClearSelector();
+
             var service = DependencyService.Resolve<IBluetoothService>();
             if (service.IsConnected)
                 await service.DisconnectAsync();
@@ -40,8 +44,7 @@ namespace RotatingTable.Xamarin.Views
                 await configService.SetDeviceIdAsync(item.Device.Id);
 
                 await Shell.Current.GoToAsync("//MainPage");
-                if (Shell.Current?.CurrentPage is MainPage mainPage)
-                    await mainPage.Model.InitAsync();
+                await mainPage.Model.InitAsync();
             }
         }
     }

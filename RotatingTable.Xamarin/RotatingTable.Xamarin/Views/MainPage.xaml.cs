@@ -41,6 +41,8 @@ namespace RotatingTable.Xamarin.Views
             CrossBluetoothLE.Current.Adapter.DeviceConnectionLost += DeviceConnectionLost;
 
             Model.Service.Timeout += ServiceTimeout;
+
+            DependencyService.RegisterSingleton(this);
         }
 
         public MainViewModel Model
@@ -82,14 +84,19 @@ namespace RotatingTable.Xamarin.Views
             canvasView.InvalidateSurface();
         }
 
-        void OnTouchEffectAction(object sender, TouchActionEventArgs args)
+        private void OnTouchEffectAction(object sender, TouchActionEventArgs args)
         {
             _selector.GetDrawer((Mode)Model.CurrentMode).OnTouchEffectAction(sender, args);
         }
 
-        private void OnStop(object sender, EventArgs args)
+        public void ClearSelector()
         {
             _selector.Clear();
+        }
+
+        private void OnStop(object sender, EventArgs args)
+        {
+            ClearSelector();
         }
 
         private void OnWaitingTimeout(object sender, EventArgs args)
