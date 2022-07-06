@@ -348,12 +348,13 @@ namespace RotatingTable.Xamarin.ViewModels
             else if (text == Commands.End)
             {
                 // finished
-                IsRunning = false;
+                bool isSoftStopping = IsSoftStopping;
+                IsRunning = false; // will set IsSoftStopping to false
                 CurrentStep = 0;
                 CurrentPos = 0;
                 Stop?.Invoke(this, EventArgs.Empty);
 
-                if (IsSoftStopping)
+                if (isSoftStopping)
                 {
                     await FinishWaiting();
 
@@ -415,6 +416,8 @@ namespace RotatingTable.Xamarin.ViewModels
                         _timer = new System.Timers.Timer(5000) { AutoReset = false };
                         _timer.Elapsed += async (s, a) =>
                         {
+                            System.Diagnostics.Debug.WriteLine("5 seconds elapsed and waiting timer has expired");
+
                             // If table is still running and we are waiting for soft stop
                             if (IsRunning && IsSoftStopping)
                             {
@@ -423,6 +426,8 @@ namespace RotatingTable.Xamarin.ViewModels
                                 WaitingTimeout?.Invoke(this, EventArgs.Empty);
                             }
                         };
+
+                        System.Diagnostics.Debug.WriteLine("Start waiting timer...");
                         _timer.Start();
                     }
                     else
@@ -443,6 +448,7 @@ namespace RotatingTable.Xamarin.ViewModels
 
         private async Task FinishWaiting()
         {
+            System.Diagnostics.Debug.WriteLine("Stop waiting timer");
             _timer?.Stop();
             _timer?.Dispose();
             _timer = null;
@@ -467,7 +473,7 @@ namespace RotatingTable.Xamarin.ViewModels
             }
         }
 
-        public async void OnManualStepDataReseived(string text)
+        public void OnManualStepDataReseived(string text)
         {
             if (text.StartsWith(Commands.Step))
             {
@@ -486,11 +492,6 @@ namespace RotatingTable.Xamarin.ViewModels
                 _performingManualStep = false;
                 CurrentStep = 0;
                 CurrentPos = 0;
-
-                // Store current frequency
-                var nonstopFrequency = await Service.GetNonstopFrequencyAsync();
-                if (nonstopFrequency != null)
-                    await Config.SetNonstopFrequencyAsync(nonstopFrequency.Value);
             }
         }
 

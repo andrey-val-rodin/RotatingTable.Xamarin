@@ -398,9 +398,15 @@ namespace RotatingTable.Xamarin.Services
                 await Task.Run(() => _waitingEvent.WaitOne(1000));
 
                 if (string.IsNullOrEmpty(_stringResponse))
-                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+                    await _userDialogs.AlertAsync("Стол не отвечает на команду");
 
                 return _stringResponse;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                await _userDialogs.AlertAsync(ex.Message, $"Не удалось отправить команду {command}");
+                return null;
             }
             finally
             {
@@ -440,9 +446,15 @@ namespace RotatingTable.Xamarin.Services
                 await Task.Run(() => _waitingEvent.WaitOne(500));
 
                 if (_intResponse == null)
-                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+                    await _userDialogs.AlertAsync("Стол не возвращает целочисленное значение");
 
                 return _intResponse;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                await _userDialogs.AlertAsync(ex.Message, $"Не удалось отправить команду {command}");
+                return null;
             }
             finally
             {
@@ -479,9 +491,15 @@ namespace RotatingTable.Xamarin.Services
                 await Task.Run(() => _waitingEvent.WaitOne(500));
 
                 if (_floatResponse == null)
-                    await _userDialogs.AlertAsync("Превышено время ожидания ответа");
+                    await _userDialogs.AlertAsync("Стол не возвращает значение с плавающей запятой");
 
                 return _floatResponse;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+                await _userDialogs.AlertAsync(ex.Message, $"Не удалось отправить команду {command}");
+                return null;
             }
             finally
             {

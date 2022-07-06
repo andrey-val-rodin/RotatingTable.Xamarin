@@ -158,7 +158,7 @@ namespace RotatingTable.Xamarin.Views
                         _alertSource.Cancel();
 
                     _alertSource = new CancellationTokenSource();
-                    await _userDialogs.AlertAsync("Превышено время ожидания ответа от стола в процессе работы",
+                    await _userDialogs.AlertAsync("Стол перестал присылать сообщения в процессе работы",
                             cancelToken: _alertSource.Token);
 
                     await Shell.Current.GoToAsync("//ConnectPage");
