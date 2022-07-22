@@ -61,6 +61,9 @@ namespace RotatingTable.Xamarin.Services
             if (IsConnected)
                 throw new InvalidOperationException("Connected already");
 
+            if (!CrossBluetoothLE.Current.IsOn) // if Bluetooth is off on device
+                return false;
+
             CancellationTokenSource tokenSource = new();
             string error = null;
             try
